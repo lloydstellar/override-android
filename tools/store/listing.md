@@ -25,7 +25,7 @@ licensed and credited in the app (About, Open source licences).
 
 It is the year 2048 and the AI NEXUS-9 owns every network. What it cannot read is analogue hardware. You sit at a hacked military CRT and play the number puzzle that decides the fight: slide the signals on the 4 x 4 matrix, fuse two equal signals into one of double strength, and build a pulse of exactly 2048 bit to overload the AI core.
 
-The rules of 2048 are untouched, with two problems on top. Every move without a fusion raises the AI Trace, and at 100 % NEXUS-9 locks one of your cells for five moves. From the 32 onward, red Corrupted Nodes appear that refuse to fuse upward: purge one with an equal signal, or park it next to a 64 EMP Cell and watch it fry.
+The rules of 2048 are untouched, with two problems on top. Every move without a fusion raises the AI Trace, and at 100 % NEXUS-9 locks one of your cells for five moves, and it will, a few times per session. From the 32 onward, red Corrupted Nodes appear that refuse to fuse upward: purge one with an equal signal, or park it next to a 64 EMP Cell and watch it fry.
 
 Twelve sectors, each with its own twist:
 • a trace that climbs three times as fast
@@ -33,7 +33,7 @@ Twelve sectors, each with its own twist:
 • a 5 x 5 matrix, a 3 x 3 matrix, burned-out cells
 • a satellite window of 380 moves
 • the NEXUS core itself, with every rule at full strength
-Every sector gives up to three signal bars: one for the clear, one for staying under par, one for never getting locked.
+Every sector gives up to three signal bars: one for the clear, one for staying under par, one for keeping NEXUS-9 under its lock limit.
 
 Made a bad move? ROLLBACK undoes it, spawn included. You earn the charges by building big signals, so it helps without making the game trivial.
 
@@ -61,7 +61,7 @@ No ads, no account, no tracking, no purchases. The app has no internet access at
 
 Het is 2048 en de AI NEXUS-9 beheerst elk netwerk. Wat hij niet kan lezen is analoge hardware. Jij zit achter een gehackte militaire CRT en speelt de nummerpuzzel die het gevecht beslist: schuif de signalen over de 4 x 4-matrix, fuseer twee gelijke signalen tot één van dubbele sterkte en bouw een puls van precies 2048 bit om de kern van de AI te overbelasten.
 
-De regels van 2048 zijn onaangeroerd, met twee problemen erbovenop. Elke zet zonder fusie laat de AI Trace stijgen, en bij 100 % vergrendelt NEXUS-9 vijf zetten lang een van je cellen. Vanaf de 32 verschijnen rode Corrupted Nodes die niet omhoog fuseren: zuiver er een met een gelijk signaal, of zet hem naast een 64 EMP Cell en zie hem doorbranden.
+De regels van 2048 zijn onaangeroerd, met twee problemen erbovenop. Elke zet zonder fusie laat de AI Trace stijgen, en bij 100 % vergrendelt NEXUS-9 vijf zetten lang een van je cellen, en dat gebeurt een paar keer per sessie. Vanaf de 32 verschijnen rode Corrupted Nodes die niet omhoog fuseren: zuiver er een met een gelijk signaal, of zet hem naast een 64 EMP Cell en zie hem doorbranden.
 
 Twaalf sectoren, elk met een eigen twist:
 • een trace die drie keer zo snel stijgt
@@ -69,7 +69,7 @@ Twaalf sectoren, elk met een eigen twist:
 • een 5 x 5-matrix, een 3 x 3-matrix, doorgebrande cellen
 • een satellietvenster van 380 zetten
 • de NEXUS-kern zelf, met elke regel op volle sterkte
-Elke sector geeft tot drie signaalbalken: een voor het halen, een voor binnen par blijven, een voor nooit vergrendeld worden.
+Elke sector geeft tot drie signaalbalken: een voor het halen, een voor binnen par blijven, een voor NEXUS-9 onder zijn lock-limiet houden.
 
 Een slechte zet gedaan? ROLLBACK draait hem terug, inclusief de nieuwe tegel. De ladingen verdien je door grote signalen te bouwen, dus het helpt zonder dat het spel te makkelijk wordt.
 
@@ -116,6 +116,6 @@ Category: Game. No violence (the "AI" is fought with a number puzzle, nothing is
 
 1. Create the app in the Play Console (name above, default language English).
 2. Turn on Play App Signing and upload `app/build/outputs/bundle/release/app-release.aab`. The key in `signing/` (not in the repository) is the upload key; keep a backup of `signing/` somewhere safe.
-3. Personal developer accounts created after November 13, 2023 first need a closed test with at least 12 testers who stay opted in for 14 days in a row before production access.
+3. The closed test with 12 testers for 14 days only applies to personal developer accounts; this app goes out under the organisation account, like Spin Doctor, so it can go straight to production.
 4. Graphics, Data safety, privacy policy URL, content rating as above. Target audience: 13 and up is the safe choice for a game with a dystopian story; it can be "all ages" content-wise.
 5. Bump `versionCode` in `app/build.gradle.kts` for every upload.

@@ -168,7 +168,7 @@ private fun BottomBar(game: GameController) {
 private val HINTS = mapOf(
     "swipe" to ("SWIPE TO SLIDE EVERY SIGNAL" to "Two equal signals that touch fuse into one of double strength. Keep fusing until you hold a 2048."),
     "corrupt" to ("A RED NODE APPEARED" to "Corrupted Nodes do not fuse upward. Slide an equal signal into one to purge both, or park it next to a 64 EMP Cell."),
-    "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100 % NEXUS-9 locks a cell."),
+    "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100\u00A0% NEXUS-9 locks a cell."),
     "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move."),
     "emp" to ("EMP CELL ONLINE" to "Your 64 fries any Corrupted Node that ends up right next to it, for 64 Hz."),
     "rollback" to ("ROLLBACK BUFFER" to "ROLLBACK undoes your last move, spawn and trace included. You get a charge for every new 256, 512, 1024 and up, three at most."),
@@ -327,7 +327,8 @@ private fun SectorClearOverlay(game: GameController, onMap: () -> Unit) {
                 DashedRule()
                 LeaderRow("OVERRIDE", "YES", C.Green)
                 LeaderRow("WITHIN PAR ${s.par}", if (e.moves <= s.par) "YES (${e.moves})" else "NO (${e.moves})", if (e.moves <= s.par) C.Green else C.Dim)
-                LeaderRow("NEVER LOCKED", if (e.locksSuffered == 0) "YES" else "NO (${e.locksSuffered})", if (e.locksSuffered == 0) C.Green else C.Dim)
+                val ok = e.locksSuffered <= s.lockBudget
+                LeaderRow(lockGoal(s.lockBudget), if (ok) "YES (${e.locksSuffered})" else "NO (${e.locksSuffered})", if (ok) C.Green else C.Dim)
             }
         }
         Spacer(Modifier.height(18.dp))
@@ -410,6 +411,13 @@ private fun ResultsOverlay(game: GameController, r: Result, onHome: () -> Unit, 
             }
         }
     }
+}
+
+/** The third bar of a sector, in words. */
+fun lockGoal(budget: Int) = when (budget) {
+    0 -> "NEVER LOCKED"
+    1 -> "AT MOST 1 LOCK"
+    else -> "AT MOST $budget LOCKS"
 }
 
 fun formatTime(sec: Int): String = if (sec >= 3600) "%d:%02d:%02d".format(java.util.Locale.ENGLISH, sec / 3600, sec / 60 % 60, sec % 60)

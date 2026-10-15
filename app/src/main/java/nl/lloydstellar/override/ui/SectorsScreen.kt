@@ -64,7 +64,7 @@ fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector) -> Unit, o
                 }
                 SECTORS.forEach { s -> SectorRow(store, s) { open = s.number } }
                 Spacer(Modifier.height(4.dp))
-                Text("BARS: ONE FOR THE OVERRIDE, ONE FOR MAKING IT WITHIN PAR, ONE FOR NEVER BEING LOCKED BY NEXUS-9.",
+                Text("BARS: ONE FOR THE OVERRIDE, ONE FOR MAKING IT WITHIN PAR, ONE FOR KEEPING NEXUS-9 UNDER ITS LOCK LIMIT.",
                     style = mono(12.sp, C.Dim, 0.5.sp))
             }
         }
@@ -141,7 +141,8 @@ private fun Briefing(store: Store, s: Sector, onClose: () -> Unit, onStart: () -
                 }
                 LeaderRow("MATRIX", "${s.rules.size} X ${s.rules.size}" + if (s.rules.deadCells.isNotEmpty()) ", ${s.rules.deadCells.size} DEAD" else "")
                 if (s.rules.moveLimit > 0) LeaderRow("MOVE LIMIT", s.rules.moveLimit.toString(), C.Red)
-                LeaderRow("PAR", s.par.toString())
+                LeaderRow("PAR", "${s.par} MOVES")
+                LeaderRow("THIRD BAR", lockGoal(s.lockBudget))
                 val best = store.sectorBest[s.number - 1]
                 LeaderRow("YOUR BEST", if (best > 0) "$best MOVES" else "-", if (best > 0) C.Amber else C.Dim)
                 Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -21,8 +21,8 @@ permission and keeps scores and achievements on the phone.
 
 ## What is new in the app
 
-- **Classic** plays exactly like the browser game. `ParityTest` proves it (see Tests).
-- **Sectors**: twelve levels with their own twist on the rules: a faster trace, Corrupted Nodes from the first move, a 5 x 5 and a 3 x 3 matrix, burned-out cells, a move limit, longer locks, and the NEXUS core at the end. Up to three signal bars each (cleared, within par, never locked).
+- **Classic** uses the browser's rules with a sharper AI Trace (see below). The engine itself matches the browser move for move; `ParityTest` proves it (see Tests).
+- **Sectors**: twelve levels with their own twist on the rules: a faster trace, Corrupted Nodes from the first move, a 5 x 5 and a 3 x 3 matrix, burned-out cells, a move limit, longer locks, and the NEXUS core at the end. Up to three signal bars each (cleared, within par, NEXUS-9 kept under the sector's lock limit).
 - **Rollback**: undo the last move, spawn and trace included. One charge at the start, one more for every new 256, 512, 1024 and up, three at most. The random generator is restored too, so a rollback cannot be used to fish for a better spawn.
 - **20 achievements**, top 20 sessions, lifetime stats.
 - One-time hints the first time a Corrupted Node, a high trace, a lock or an EMP Cell shows up.
@@ -30,6 +30,7 @@ permission and keeps scores and achievements on the phone.
 
 ## Differences from the browser game
 
+- In the browser a move without a fusion adds 2 % to the AI Trace and every fusion takes 1 % off, so the trace almost never reaches 100 %: in hundreds of simulated games NEXUS-9 did not lock a single cell. Classic in the app adds 5 % per idle move and drops the trace to 25 % after a lock (35 % in the browser). That gives a lock about every 180 to 220 moves, a few per session, and the same Override rate as before. `ClassicTuningSim` compares the settings; the browser's own numbers are kept as `WEB` in `Rules.kt`.
 - The victory strobe of the browser flashes at 10 Hz. The app pulses twice in about a second instead, under the three flashes per second that photosensitive players can take. Screen shake, static and flashes can be turned off, and are off when Android's animations are off.
 - A swipe made while tiles are still sliding is never dropped: the slide is finished early and the new move starts.
 - If the board is stuck right after the Override and you choose to continue, the app ends the session instead of leaving you on a board without moves.
@@ -65,7 +66,7 @@ The boards are in `Demo.kt`.
 
 `ParityTest` replays games recorded from the browser's `override.js` and
 checks that every move ends with the same board, locks, score, move count,
-trace and win state. `tools/parity/run-js.mjs` runs the original JavaScript
+trace and win state, playing the browser's numbers (`WEB` in `Rules.kt`). `tools/parity/run-js.mjs` runs the original JavaScript
 headless in Node and records the games; the spawns come from the same seeded
 generator on both sides. There are two recordings: the real game, and a
 stress version of the same file with three numbers patched (a faster trace,
@@ -89,6 +90,7 @@ targets and par values in `Sectors.kt` come from it:
 
 ```
 ./gradlew :app:testDebugUnitTest --tests '*SectorBalanceSim*' -Psim=200
+./gradlew :app:testDebugUnitTest --tests '*ClassicTuningSim*' -Psim=150
 ```
 
 ## What is where

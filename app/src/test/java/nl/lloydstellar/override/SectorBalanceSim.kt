@@ -28,7 +28,7 @@ class SectorBalanceSim {
         assumeTrue("run with -Psim=<games per sector>", games > 0)
         val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())
         val out = StringBuilder()
-        out.append("sector               skill   clear  median  p75   par  2bars  3bars  locks/game\n")
+        out.append("sector               skill   clear  median  p75   par  2bars  3bars  locks/game  budget  locks p40/p60\n")
         /* Classic (to 2048, then stop) as the yardstick */
         val classic = Sector(0, "CLASSIC", "", emptyList(), CLASSIC.copy(endless = false), 1000)
         for (s in SECTORS + classic) for (skill in Bot.Skill.entries) {
@@ -50,12 +50,15 @@ class SectorBalanceSim {
             val median = moves.getOrElse(moves.size / 2) { 0 }
             val p75 = moves.getOrElse(moves.size * 3 / 4) { 0 }
             val twoBars = cleared.count { it[1] <= s.par }
-            val threeBars = cleared.count { it[1] <= s.par && it[2] == 0 }
+            val threeBars = cleared.count { it[1] <= s.par && it[2] <= s.lockBudget }
+            val clearedLocks = cleared.map { it[2] }.sorted()
+            val p40 = clearedLocks.getOrElse(clearedLocks.size * 2 / 5) { 0 }
+            val p60 = clearedLocks.getOrElse(clearedLocks.size * 3 / 5) { 0 }
             val locks = results.sumOf { it[2] }.toDouble() / games
             out.append(
-                "%-20s %-7s %4.0f%%  %6d %5d %5d  %4.0f%%  %4.0f%%  %6.2f\n".format(
+                "%-20s %-7s %4.0f%%  %6d %5d %5d  %4.0f%%  %4.0f%%  %10.2f  %6d  %3d/%d\n".format(
                     "${s.code} ${s.name}", skill.name.lowercase(), 100.0 * cleared.size / games, median, p75, s.par,
-                    100.0 * twoBars / games, 100.0 * threeBars / games, locks
+                    100.0 * twoBars / games, 100.0 * threeBars / games, locks, s.lockBudget, p40, p60
                 )
             )
         }

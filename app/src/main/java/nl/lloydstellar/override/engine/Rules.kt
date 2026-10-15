@@ -5,7 +5,7 @@ data class StartTile(val x: Int, val y: Int, val value: Int, val corrupt: Boolea
 
 /**
  * Everything that can differ between Classic and a sector. The defaults are
- * the numbers of the browser game (override.js); [CLASSIC] uses them all.
+ * the numbers of the browser game (override.js), kept together as [WEB].
  */
 data class Rules(
     val size: Int = 4,
@@ -38,4 +38,16 @@ data class Rules(
     val startTiles: List<StartTile> = emptyList(),
 )
 
-val CLASSIC = Rules()
+/** The rules of the browser game, number for number. ParityTest plays these. */
+val WEB = Rules()
+
+/**
+ * Classic in the app: the browser's rules with an AI Trace that bites. In the
+ * browser a move without a fusion adds 2 % and every fusion takes 1 % off, so
+ * the trace almost never reaches 100 % and NEXUS-9 practically never locks a
+ * cell (ClassicTuningSim: not once in hundreds of games). With 5 % per idle
+ * move a lock comes about every 180 to 220 moves, a few per session, without
+ * changing how often players reach the Override; after a lock the trace drops
+ * to 25 % instead of 35 %, so there is room to recover.
+ */
+val CLASSIC = WEB.copy(traceEmpty = 5, traceAfterLock = 25)

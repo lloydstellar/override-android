@@ -32,7 +32,7 @@ val ACHIEVEMENTS = listOf(
     Achievement("t4096", "Core Breach", "Build a 4096 in Global Purge mode."),
     Achievement("t8192", "Global Purge", "Build an 8192. Nobody has."),
     Achievement("clean", "Clean Hands", "Override in Classic without a rollback."),
-    Achievement("cold", "Cold Trace", "Override in Classic with the AI Trace never above 20 %."),
+    Achievement("cold", "Ghost in the Wire", "Override in Classic with three NEXUS-9 locks or fewer."),
     Achievement("fast", "Burst Transmission", "Override in Classic in under 1000 moves."),
     Achievement("purge", "Antivirus", "Purge a Corrupted Node with an equal signal."),
     Achievement("fry", "Fried", "Let an EMP Cell fry a Corrupted Node."),

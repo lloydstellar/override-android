@@ -104,8 +104,9 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 Text("2048 Override ${BuildConfig.VERSION_NAME}", style = mono(16.sp, C.Bright, 1.sp))
                 Spacer(Modifier.height(8.dp))
                 Body(
-                    "2048 Override started as a browser game on my website. This is the same game with the same rules, " +
-                        "rebuilt for your phone, with twelve sectors, rollbacks and achievements on top."
+                    "2048 Override started as a browser game on my website. This is the same game, rebuilt for your phone, " +
+                        "with a sharper AI: NEXUS-9 notices idle moves sooner, so it locks a cell now and then. " +
+                        "On top come twelve sectors, rollbacks and achievements."
                 )
                 Body(
                     "I'm Lloyd Stellar, an electro producer from Hilversum. On lloydstellar.nl you'll find more free " +
@@ -122,7 +123,7 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 DashedRule()
                 Heading("HOW TO PLAY")
                 Body("Swipe to slide every signal on the matrix. Two equal signals that touch fuse into one of double strength. Build a 2048 to overload the AI core.")
-                Body("A move without a fusion raises the AI Trace; at 100 % NEXUS-9 locks a cell for a few moves. Red Corrupted Nodes refuse to fuse upward: slide an equal signal into one, or park it next to a 64 EMP Cell.")
+                Body("A move without a fusion raises the AI Trace; at 100\u00A0% NEXUS-9 locks a cell for a few moves. Red Corrupted Nodes refuse to fuse upward: slide an equal signal into one, or park it next to a 64 EMP Cell.")
                 Body("ROLLBACK undoes your last move. You start a session with one charge and earn one for every new 256, 512, 1024 and up, three at most.")
                 Heading("PRIVACY")
                 Body("No ads, no account, no tracking. The app has no internet access at all. Your scores stay on this phone.")

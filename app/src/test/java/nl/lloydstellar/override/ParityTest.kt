@@ -1,6 +1,6 @@
 package nl.lloydstellar.override
 
-import nl.lloydstellar.override.engine.CLASSIC
+import nl.lloydstellar.override.engine.WEB
 import nl.lloydstellar.override.engine.Engine
 import nl.lloydstellar.override.engine.GameState
 import nl.lloydstellar.override.engine.Rng
@@ -31,10 +31,10 @@ class ParityTest {
         val text = java.util.zip.GZIPInputStream(javaClass.getResourceAsStream(resource)!!).bufferedReader().readText()
         val root = JSONObject(text)
         val r = root.getJSONObject("rules")
-        val rules: Rules = CLASSIC.copy(
-            traceEmpty = r.optInt("traceEmpty", CLASSIC.traceEmpty),
-            corruptChance = r.optDouble("corruptChance", CLASSIC.corruptChance),
-            target = r.optInt("target", CLASSIC.target),
+        val rules: Rules = WEB.copy(
+            traceEmpty = r.optInt("traceEmpty", WEB.traceEmpty),
+            corruptChance = r.optDouble("corruptChance", WEB.corruptChance),
+            target = r.optInt("target", WEB.target),
         )
         val games = root.getJSONArray("games")
         var moves = 0

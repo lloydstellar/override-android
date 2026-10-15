@@ -374,7 +374,7 @@ class GameController(private val store: Store) {
             store.countOverride(engine.moves)
             award("override")
             if (rollbacksUsed == 0) award("clean")
-            if (engine.peakTrace <= 20) award("cold")
+            if (engine.locksSuffered <= 3) award("cold")
             if (engine.wonAtMove < 1000) award("fast")
             Sfx.speak("override", 1.4)
             buildResult()
@@ -466,7 +466,7 @@ class GameController(private val store: Store) {
         if (s == null) {
             rank = store.addRun(Run(e.score, e.maxTile, System.currentTimeMillis(), e.moves, seconds, e.won))
         } else if (e.state == GameState.WON) {
-            bars = 1 + (if (e.moves <= s.par) 1 else 0) + (if (e.locksSuffered == 0) 1 else 0)
+            bars = 1 + (if (e.moves <= s.par) 1 else 0) + (if (e.locksSuffered <= s.lockBudget) 1 else 0)
             improved = store.clearSector(s.number, bars, e.moves)
             if (SECTORS.all { store.bars[it.number - 1] > 0 }) award("sectors")
             if (SECTORS.all { store.bars[it.number - 1] == 3 }) award("bars")

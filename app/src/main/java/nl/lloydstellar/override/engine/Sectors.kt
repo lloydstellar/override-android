@@ -3,8 +3,8 @@ package nl.lloydstellar.override.engine
 /**
  * The campaign: twelve sectors of the grid, each with its own twist on the
  * rules. Clearing a sector opens the next one. Three signal bars per sector:
- * one for the Override, one for making it within [par] moves, one for never
- * letting NEXUS-9 lock a cell.
+ * one for the Override, one for making it within [par] moves, one for
+ * keeping NEXUS-9 to at most [lockBudget] locks.
  *
  * The numbers (targets, trace speeds, par) were tuned with SectorBalanceSim,
  * a bot that plays every sector a few hundred times.
@@ -18,6 +18,7 @@ class Sector(
     val briefing: List<String>,
     val rules: Rules,
     val par: Int,
+    val lockBudget: Int = 0,
 ) {
     val code get() = "S" + number.toString().padStart(2, '0')
 }
@@ -35,13 +36,14 @@ val SECTORS = listOf(
         par = 160,
     ),
     Sector(
-        2, "TRACE ROUTE", "The trace climbs three times as fast.",
+        2, "TRACE ROUTE", "The trace climbs twice as fast.",
         listOf(
             "This sector is wired to the AI's own routers. Every idle move gets noticed.",
-            "A move without a fusion raises the trace by 6 %. At 100 % NEXUS-9 seals a cell. Keep fusing.",
+            "A move without a fusion raises the trace by 10\u00A0%. At 100\u00A0% NEXUS-9 seals a cell. Keep fusing.",
         ),
-        CLASSIC.copy(target = 256, endless = false, corruptFrom = noNodes, traceEmpty = 6),
+        CLASSIC.copy(target = 256, endless = false, corruptFrom = noNodes, traceEmpty = 10),
         par = 160,
+        lockBudget = 2,
     ),
     Sector(
         3, "ROGUE CODE", "Corrupted Nodes from the first move.",
@@ -51,6 +53,7 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(target = 256, endless = false, corruptFrom = 2, corruptChance = 0.14),
         par = 240,
+        lockBudget = 1,
     ),
     Sector(
         4, "EMP", "Starts with an EMP Cell. Nodes everywhere.",
@@ -63,6 +66,7 @@ val SECTORS = listOf(
             startTiles = listOf(StartTile(0, 3, 64)),
         ),
         par = 230,
+        lockBudget = 1,
     ),
     Sector(
         5, "WIDE BAND", "A 5 x 5 matrix, crawling with nodes.",
@@ -70,8 +74,9 @@ val SECTORS = listOf(
             "An old broadcast tower with a wider bus. Twenty-five slots, and more noise on the line.",
             "More room, and more red nodes than anywhere else. Build a 512 before the noise takes over.",
         ),
-        CLASSIC.copy(size = 5, target = 512, endless = false, corruptFrom = 8, corruptChance = 0.16, corruptMax = 4),
+        CLASSIC.copy(size = 5, target = 512, endless = false, corruptFrom = 8, corruptChance = 0.16, corruptMax = 4, traceEmpty = 3),
         par = 470,
+        lockBudget = 1,
     ),
     Sector(
         6, "DEAD PIXEL", "One cell is burned out for good.",
@@ -88,17 +93,19 @@ val SECTORS = listOf(
             "The AI floods the grid with rogue code. Four red nodes at a time, from the start.",
             "Keep an EMP Cell close and your matrix clean. Target 256.",
         ),
-        CLASSIC.copy(target = 256, endless = false, corruptFrom = 2, corruptChance = 0.25, corruptMax = 4, tracePerNode = 2),
+        CLASSIC.copy(target = 256, endless = false, corruptFrom = 2, corruptChance = 0.25, corruptMax = 4),
         par = 330,
+        lockBudget = 4,
     ),
     Sector(
         8, "LOCKDOWN", "Locks last twice as long.",
         listOf(
             "NEXUS-9 has a daemon on this sector. Its locks hold for ten moves, and it never forgets you.",
-            "After a lock the trace only drops to 50 %. Fuse, or lose the board.",
+            "After a lock the trace only drops to 50\u00A0%. Fuse, or lose the board.",
         ),
-        CLASSIC.copy(target = 512, endless = false, traceEmpty = 5, lockTurns = 10, traceAfterLock = 50),
+        CLASSIC.copy(target = 512, endless = false, traceEmpty = 6, lockTurns = 10, traceAfterLock = 50),
         par = 340,
+        lockBudget = 3,
     ),
     Sector(
         9, "BURST WINDOW", "512 within 380 moves.",
@@ -108,6 +115,7 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(target = 512, endless = false, moveLimit = 380),
         par = 315,
+        lockBudget = 1,
     ),
     Sector(
         10, "NARROW BAND", "A 3 x 3 matrix. Target 128.",
@@ -124,8 +132,9 @@ val SECTORS = listOf(
             "Half the city is dark. Three slots of the wide matrix are burned out, and the AI is listening.",
             "Twenty-two cells, a fast trace, and a 1024 to build.",
         ),
-        CLASSIC.copy(size = 5, target = 1024, endless = false, traceEmpty = 4, deadCells = listOf(2 to 0, 0 to 2, 4 to 3)),
+        CLASSIC.copy(size = 5, target = 1024, endless = false, traceEmpty = 6, deadCells = listOf(2 to 0, 0 to 2, 4 to 3)),
         par = 700,
+        lockBudget = 6,
     ),
     Sector(
         12, "NEXUS CORE", "The core itself. 2048, every rule at full strength.",
@@ -133,7 +142,8 @@ val SECTORS = listOf(
             "The processing core under the old studio district. Everything we learned ends here.",
             "Corrupted Nodes, a faster trace, longer locks. Assemble the Override Code and take the core down.",
         ),
-        CLASSIC.copy(endless = false, traceEmpty = 3, corruptChance = 0.08, lockTurns = 7),
+        CLASSIC.copy(endless = false, traceAfterLock = 35, corruptChance = 0.08, lockTurns = 7),
         par = 1250,
+        lockBudget = 6,
     ),
 )
