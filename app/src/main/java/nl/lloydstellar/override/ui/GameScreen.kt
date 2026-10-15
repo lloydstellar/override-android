@@ -255,10 +255,10 @@ private fun BottomBar(game: GameController, highlightRollback: Boolean = false) 
 
 private val HINTS = mapOf(
     "swipe" to ("SWIPE TO SLIDE EVERY SIGNAL" to "Two equal signals that touch fuse into one of double strength. Keep fusing until you hold a 2048."),
-    "corrupt" to ("A RED NODE APPEARED" to "Corrupted Nodes do not fuse upward. Slide an equal signal into one to purge both, or park it next to a 64 EMP Cell."),
+    "corrupt" to ("A RED NODE APPEARED" to "Red nodes block a cell and help NEXUS-9 find you: every move without a fusion raises the trace faster. Slide an equal signal into one to wipe out both, or let a 64 touch it."),
     "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100\u00A0% NEXUS-9 locks a cell."),
     "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move."),
-    "emp" to ("EMP CELL ONLINE" to "Your 64 fries any Corrupted Node that ends up right next to it, for 64 Hz."),
+    "emp" to ("EMP DISCHARGE" to "Your 64 just fried a red node. A 64 is an EMP Cell: any node that ends up right next to it burns out, for 64 Hz."),
     "rollback" to ("ROLLBACK BUFFER" to "ROLLBACK undoes your last move, spawn and trace included. You get a charge for every new 256, 512, 1024 and up, as far as the buffer holds."),
 )
 

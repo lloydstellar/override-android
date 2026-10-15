@@ -492,7 +492,7 @@ class GameController(private val store: Store) {
             showHint("lock")
         }
         if (r.newMax > 0) onNewMax(r.newMax)
-        if (engine.countCorrupt() > 0 && engine.tiles().any { !it.corrupt && it.value == 64 }) showHint("emp")
+        if (r.fried.isNotEmpty()) showHint("emp")
 
         /* achievements of a single move */
         if (r.purges.isNotEmpty()) award("purge")

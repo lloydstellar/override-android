@@ -32,13 +32,13 @@ object Directives {
 
     private val TWISTS = listOf(
         Twist("hot", "HOT TRACE", "Idle moves raise the trace by 9 %.", 1.05, 4.0) { r, _ -> r.copy(traceEmpty = 9) },
-        Twist("rogue", "ROGUE CODE", "Corrupted Nodes from the first move.", 1.45, 1.8) { r, _ -> r.copy(corruptFrom = 2, corruptChance = 0.14) },
+        Twist("rogue", "ROGUE CODE", "Corrupted Nodes from the first move.", 1.45, 2.3) { r, _ -> r.copy(corruptFrom = 2, corruptChance = 0.14) },
         Twist("swarm", "SWARM", "Up to four Corrupted Nodes at once.", 2.05, 3.0) { r, _ -> r.copy(corruptFrom = 2, corruptChance = 0.25, corruptMax = 4) },
         Twist("pixel", "DEAD PIXEL", "One cell is burned out.", 1.1, 1.3) { r, g -> r.copy(deadCells = deadCells(r.size, 1, g)) },
         Twist("blackout", "BLACKOUT", "Two cells are burned out.", 1.25, 1.6, dailyTarget = 128) { r, g -> r.copy(deadCells = deadCells(r.size, 2, g)) },
         Twist("locks", "LONG LOCKS", "Locks hold for nine moves.", 1.0, 1.4) { r, _ -> r.copy(lockTurns = 9, traceAfterLock = 45) },
         Twist("fours", "HEAVY SPAWNS", "One spawn in three is a 4.", 0.85, 1.0) { r, _ -> r.copy(fourChance = 0.33) },
-        Twist("emp", "EMP DROP", "An EMP Cell in a corner, and red nodes from the start.", 1.2, 2.3) { r, g ->
+        Twist("emp", "EMP DROP", "An EMP Cell in a corner, and red nodes from the start.", 1.2, 2.8) { r, g ->
             val corners = listOf(0 to 0, r.size - 1 to 0, 0 to r.size - 1, r.size - 1 to r.size - 1)
             val (x, y) = corners[g.below(4)]
             r.copy(startTiles = listOf(StartTile(x, y, 64)), corruptFrom = 2, corruptChance = 0.16, corruptMax = 3)

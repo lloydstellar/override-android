@@ -110,6 +110,13 @@ class GameView(context: Context, private val game: GameController) : View(contex
     private var flash = 0f
     private var noiseBurst = 0
     private val vu = Vu()
+    /* nodes fried by an EMP: still drawn while the slide runs, then the arc */
+    private var friedShown: List<Tile> = emptyList()
+    private class Bolt(val x0: Float, val y0: Float, val x1: Float, val y1: Float, var life: Float)
+    private val bolts = ArrayList<Bolt>()
+    /* the red nodes just pushed the trace up: they pulse, the bar says by how much */
+    private var nodePulse = 0f
+    private var nodeTrace = 0
     private var winAt = 0L
     private var lostAt = 0L
     private var rollbackAt = 0L
@@ -397,6 +404,8 @@ class GameView(context: Context, private val game: GameController) : View(contex
     private fun snap() {
         slide.active = false
         impact = null
+        friedShown = emptyList()
+        nodePulse = 0f
         pops.clear(); appears.clear()
         lostAt = 0L
         if (game.phase != Phase.WON) winAt = 0L
@@ -414,6 +423,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
         slide.ghosts = r.ghosts.toList()
         slide.active = true
         impact = r
+        friedShown = r.fried.toList()
         r.merges.forEach { pops[it.id] = now + SlideAnim.SLIDE_MS.toLong() }
         r.spawned?.let { appears[it.id] = now + (SlideAnim.SLIDE_MS * 0.5f).toLong() }
         surgeDir = r.dir; surgeT = 0
@@ -437,10 +447,22 @@ class GameView(context: Context, private val game: GameController) : View(contex
             sparks(l, x, y, 0xFFFF4D6D.toInt(), 18)
             rings.add(Ring(l.cellX(x.toFloat()) + l.cell / 2, l.cellY(y.toFloat()) + l.cell / 2, 10f, 30f, 0xFFFF4D6D.toInt()))
         }
-        r.fried.forEach { t ->
+        r.fried.forEachIndexed { i, t ->
             sparks(l, t.x, t.y, 0xFFFFE64D.toInt(), 30)
             rings.add(Ring(l.cellX(t.x.toFloat()) + l.cell / 2, l.cellY(t.y.toFloat()) + l.cell / 2, 14f, 36f, 0xFFFFE64D.toInt()))
             flash = if (effectsEnabled) 0.8f else 0.3f
+            /* the arc from the EMP Cell to the node it burned */
+            r.friedBy.getOrNull(i)?.let { (ex, ey) ->
+                bolts.add(Bolt(l.cellX(ex.toFloat()) + l.cell / 2, l.cellY(ey.toFloat()) + l.cell / 2,
+                    l.cellX(t.x.toFloat()) + l.cell / 2, l.cellY(t.y.toFloat()) + l.cell / 2, 24f))
+            }
+        }
+        friedShown = emptyList()
+        /* an idle move with red nodes on the board: show that they fed the trace */
+        val nodes = game.engine.countCorrupt()
+        if (r.fusions == 0 && nodes > 0 && game.rules.tracePerNode > 0 && r.lock == null) {
+            nodePulse = 1f
+            nodeTrace = nodes * game.rules.tracePerNode
         }
     }
 
@@ -477,6 +499,8 @@ class GameView(context: Context, private val game: GameController) : View(contex
         }
         rings.removeAll { r -> r.r += 2.6f; r.life--; r.life <= 0 }
         floaters.removeAll { f -> f.y += f.dy; f.life--; f.life <= 0 }
+        bolts.removeAll { b -> b.life--; b.life <= 0 }
+        if (nodePulse > 0) nodePulse = (nodePulse - 1f / 50).coerceAtLeast(0f)
 
         /* meters */
         vu.level *= 0.90f
@@ -580,6 +604,15 @@ class GameView(context: Context, private val game: GameController) : View(contex
             c.drawRect(x, inner.top, x + sw, inner.bottom, p)
         }
         if (warn && frameT % 30 < 15) { p.color = Color.argb(20, 255, 77, 109); c.drawRoundRect(bar, 3f, 3f, p) }
+        if (nodePulse > 0 && nodeTrace > 0) {
+            /* the nodes' share of this move, in red over the bar */
+            txt.textSize = 8.5f; txt.textAlign = Paint.Align.RIGHT
+            txt.color = withAlpha(0xFFFF4D6D.toInt(), nodePulse)
+            c.drawText("RED NODES +$nodeTrace%", bar.right - 2f, t.top - 1f, txt)
+            txt.textAlign = Paint.Align.LEFT
+            stroke.color = withAlpha(0xFFFF4D6D.toInt(), nodePulse * 0.8f); stroke.strokeWidth = 1.5f
+            c.drawRoundRect(bar, 3f, 3f, stroke)
+        }
         if (highlightTrace) {
             /* a slow amber pulse around the whole trace row */
             val a = 0.45f + 0.45f * sin(frameT * 0.12f)
@@ -709,6 +742,9 @@ class GameView(context: Context, private val game: GameController) : View(contex
         if (prog < 1f) for (g in slide.ghosts) {
             drawTileAt(c, l, g, g.px + (g.x - g.px) * k, g.py + (g.y - g.py) * k, 1f, 1f)
         }
+        if (prog < 1f) for (f in friedShown) {
+            drawTileAt(c, l, f, f.px + (f.x - f.px) * k, f.py + (f.y - f.py) * k, 1f, 1f)
+        }
         game.engine.eachTile { t ->
             if (t.mergedFrom != null && prog < 1f && slide.active) return@eachTile
             val gx = if (slide.active) t.px + (t.x - t.px) * k else t.x.toFloat()
@@ -741,6 +777,12 @@ class GameView(context: Context, private val game: GameController) : View(contex
             c.drawBitmap(sprites.glow(0xFFFF2A44.toInt()), null, RectF(px - 12, py - 12, px + size + 12, py + size + 12), p)
             p.alpha = (alpha * 255).toInt()
             c.drawBitmap(sprites.corrupt(spritePx), null, dst, p)
+            if (nodePulse > 0) {
+                /* a red ring that swells out of the node while it feeds the trace */
+                val grow = (1 - nodePulse) * 14f
+                stroke.color = withAlpha(0xFFFF2A44.toInt(), nodePulse); stroke.strokeWidth = 3f
+                c.drawRoundRect(RectF(px - grow, py - grow, px + size + grow, py + size + grow), 10f + grow, 10f + grow, stroke)
+            }
             glowText(c, t.value.toString(), px + size * 0.62f, py + size * 0.58f + 8f * scale * l.cell / 72f,
                 0xFFFFD6D9.toInt(), 24f * scale * l.cell / 72f, 6f, Paint.Align.CENTER)
             if (frameT % 7 == 0 && effectsEnabled) { p.color = Color.argb(46, 255, 255, 255); c.drawRect(px, py + rnd.nextFloat() * size, px + size, py + rnd.nextFloat() * size + 2f, p) }
@@ -843,6 +885,23 @@ class GameView(context: Context, private val game: GameController) : View(contex
         p.alpha = 255
         if (flash > 0.02f) { p.color = withAlpha(Color.WHITE, flash * 0.18f); c.drawRect(gr, p) }
         c.restore()
+        /* EMP arcs: a jagged bolt from the 64 to the node */
+        for (b in bolts) {
+            val a = (b.life / 24f).coerceIn(0f, 1f)
+            stroke.color = withAlpha(0xFFFFF6B0.toInt(), a); stroke.strokeWidth = 2.5f
+            stroke.setShadowLayer(10f, 0f, 0f, withAlpha(0xFFFFE64D.toInt(), a))
+            val path = Path().apply { moveTo(b.x0, b.y0) }
+            val n = 7
+            for (i in 1 until n) {
+                val f = i / n.toFloat()
+                val jx = (rnd.nextFloat() - 0.5f) * 14f
+                val jy = (rnd.nextFloat() - 0.5f) * 14f
+                path.lineTo(b.x0 + (b.x1 - b.x0) * f + jx, b.y0 + (b.y1 - b.y0) * f + jy)
+            }
+            path.lineTo(b.x1, b.y1)
+            c.drawPath(path, stroke)
+            stroke.clearShadowLayer()
+        }
         /* floaters */
         for (f in floaters) {
             val a = min(1f, f.life / 30f)

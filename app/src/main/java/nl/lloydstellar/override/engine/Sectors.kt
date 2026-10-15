@@ -84,7 +84,7 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(size = 5, target = 512, endless = false, corruptFrom = 8, corruptChance = 0.16, corruptMax = 4, traceEmpty = 3),
         par = 470,
-        lockBudget = 1,
+        lockBudget = 2,
     ),
     Sector(
         6, "DEAD PIXEL", "One cell is burned out for good.",
@@ -103,7 +103,7 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(target = 256, endless = false, corruptFrom = 2, corruptChance = 0.25, corruptMax = 4),
         par = 330,
-        lockBudget = 4,
+        lockBudget = 5,
     ),
     Sector(
         8, "LOCKDOWN", "Locks last twice as long.",
@@ -142,7 +142,7 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(size = 5, target = 1024, endless = false, traceEmpty = 6, deadCells = listOf(2 to 0, 0 to 2, 4 to 3)),
         par = 700,
-        lockBudget = 6,
+        lockBudget = 7,
     ),
     Sector(
         12, "NEXUS CORE", "The core itself. 2048, every rule at full strength.",
@@ -152,6 +152,6 @@ val SECTORS = listOf(
         ),
         CLASSIC.copy(endless = false, traceAfterLock = 35, corruptChance = 0.08, lockTurns = 7),
         par = 1250,
-        lockBudget = 6,
+        lockBudget = 8,
     ),
 )

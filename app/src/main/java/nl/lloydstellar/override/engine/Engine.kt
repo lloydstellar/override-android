@@ -37,8 +37,9 @@ class MoveResult(val dir: Int) {
     val merges = ArrayList<Tile>()
     /** Cells where a Corrupted Node and an equal signal cancelled out, with the value. */
     val purges = ArrayList<Triple<Int, Int, Int>>()
-    /** Corrupted Nodes that an EMP Cell fried. */
+    /** Corrupted Nodes that an EMP Cell fried, and where that EMP Cell (the 64) sits. */
     val fried = ArrayList<Tile>()
+    val friedBy = ArrayList<Pair<Int, Int>>()
     var spawned: Tile? = null
     var lock: Lock? = null
     var locksReleased = 0
@@ -221,7 +222,8 @@ class Engine(rules: Rules = CLASSIC) {
         eachTile { t ->
             if (!t.corrupt) return@eachTile
             val nb = arrayOf(tileAt(t.x + 1, t.y), tileAt(t.x - 1, t.y), tileAt(t.x, t.y + 1), tileAt(t.x, t.y - 1))
-            if (nb.any { it != null && !it.corrupt && it.value == 64 }) r.fried.add(t)
+            val emp = nb.firstOrNull { it != null && !it.corrupt && it.value == 64 }
+            if (emp != null) { r.fried.add(t); r.friedBy.add(emp.x to emp.y) }
         }
         r.fried.forEach { t ->
             grid[t.x][t.y] = null

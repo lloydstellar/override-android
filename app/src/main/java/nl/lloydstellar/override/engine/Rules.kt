@@ -51,6 +51,8 @@ val WEB = Rules()
  * cell (ClassicTuningSim: not once in hundreds of games). With 5 % per idle
  * move a lock comes about every 180 to 220 moves, a few per session, without
  * changing how often players reach the Override; after a lock the trace drops
- * to 25 % instead of 35 %, so there is room to recover.
+ * to 25 % instead of 35 %, so there is room to recover. A Corrupted Node on
+ * the board adds 3 % to every idle move (1 % in the browser), so the red
+ * nodes are a threat worth cleaning up and not just free space.
  */
-val CLASSIC = WEB.copy(traceEmpty = 5, traceAfterLock = 25)
+val CLASSIC = WEB.copy(traceEmpty = 5, traceAfterLock = 25, tracePerNode = 3)
