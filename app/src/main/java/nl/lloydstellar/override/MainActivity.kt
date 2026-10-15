@@ -123,6 +123,17 @@ class MainActivity : ComponentActivity() {
         /* which save slot the game screen belongs to, for a restart after process death */
         var playing by rememberSaveable { mutableStateOf(Mode.CLASSIC) }
         fun play(mode: Mode) { playing = mode; screen = Screen.GAME }
+        /* new players get the three-step tutorial before their first session */
+        fun newClassic() {
+            if (store.hintSeen("tutorial")) game.newClassic() else game.startTutorial()
+            play(if (store.hintSeen("tutorial")) Mode.CLASSIC else Mode.TUTORIAL)
+        }
+        fun tutorialDone() {
+            store.markHint("tutorial")
+            store.markHint("swipe")
+            game.newClassic()
+            play(Mode.CLASSIC)
+        }
 
         /* debug builds: start straight into a demo board (see Demo) */
         LaunchedEffect(Unit) {
@@ -166,11 +177,15 @@ class MainActivity : ComponentActivity() {
                 label = "screen"
             ) { sc ->
                 when (sc) {
-                    Screen.INTRO -> IntroScreen { store.markHint("intro"); screen = Screen.HOME }
+                    Screen.INTRO -> IntroScreen {
+                        val first = !store.hintSeen("intro")
+                        store.markHint("intro")
+                        if (first && !store.hintSeen("tutorial")) newClassic() else screen = Screen.HOME
+                    }
                     Screen.HOME -> HomeScreen(
                         store,
                         onContinue = { if (game.continueSaved(Mode.CLASSIC)) play(Mode.CLASSIC) },
-                        onNew = { game.newClassic(); play(Mode.CLASSIC) },
+                        onNew = { newClassic() },
                         onSectors = { screen = Screen.SECTORS },
                         onRecords = { screen = Screen.RECORDS },
                         onArchive = { screen = Screen.ARCHIVE },
@@ -183,6 +198,7 @@ class MainActivity : ComponentActivity() {
                         onHome = { home() },
                         onMap = { game.leave(); screen = Screen.SECTORS },
                         onShare = { share(it) },
+                        onTutorialDone = { tutorialDone() },
                     )
                     Screen.SECTORS -> SectorsScreen(
                         store,
@@ -192,7 +208,10 @@ class MainActivity : ComponentActivity() {
                     )
                     Screen.ARCHIVE -> ArchiveScreen(store, onBack = { screen = Screen.HOME }, onOpen = { open(it) }, onBriefing = { screen = Screen.INTRO })
                     Screen.RECORDS -> RecordsScreen(store) { screen = Screen.HOME }
-                    Screen.SETTINGS -> SettingsScreen(store, onBack = { screen = Screen.HOME }, onChanged = { game.updateMusic() })
+                    Screen.SETTINGS -> SettingsScreen(
+                        store, onBack = { screen = Screen.HOME }, onChanged = { game.updateMusic() },
+                        onTutorial = { game.startTutorial(); play(Mode.TUTORIAL) },
+                    )
                     Screen.ABOUT -> AboutScreen(onBack = { screen = Screen.HOME }, onOpen = { open(it) })
                 }
             }

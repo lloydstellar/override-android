@@ -35,6 +35,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material3.Icon
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -78,6 +85,7 @@ fun GameScreen(
     onHome: () -> Unit,
     onMap: () -> Unit,
     onShare: (Result) -> Unit,
+    onTutorialDone: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val view = remember { GameView(ctx, game) }
@@ -100,7 +108,9 @@ fun GameScreen(
         onDispose { lifecycle.removeObserver(obs); view.stopLoop() }
     }
 
+    val tutorial = game.mode == Mode.TUTORIAL
     BackHandler {
+        if (tutorial) { onTutorialDone(); return@BackHandler }
         when (game.phase) {
             Phase.PLAYING -> game.pause()
             Phase.PAUSED -> game.resume()
@@ -124,7 +134,14 @@ fun GameScreen(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .onGloballyPositioned { bottomPx = (it.findRootCoordinates().size.height - it.positionInRoot().y).toInt() }
         ) {
-            BottomBar(game)
+            if (tutorial) TutorialCard(game.tutorialStep, onTutorialDone) else BottomBar(game)
+        }
+        if (tutorial) {
+            /* the next board comes in once the fusion has landed */
+            LaunchedEffect(game.tutorialStep) {
+                delay(if (game.tutorialStep == 0) 0 else 750)
+                game.loadTutorialBoard()
+            }
         }
 
         game.hint?.let { h ->
@@ -143,6 +160,65 @@ fun GameScreen(
         AnimatedVisibility(game.phase == Phase.RESULTS && res != null, enter = fadeIn(tween(250)), exit = fadeOut(tween(150))) {
             if (res != null) ResultsOverlay(game, res, onHome = onHome, onMap = onMap, onShare = { onShare(res) })
         }
+    }
+}
+
+/* ---------------- the tutorial ---------------- */
+
+private val TUTORIAL = listOf(
+    "SWIPE TO SLIDE" to "Every signal slides as far as it can. Slide the two 2s together and they fuse into a 4.",
+    "KEEP FUSING" to "Equal signals fuse into double strength: 4 and 4 make 8. Keep going, all the way to 2048.",
+    "NEXUS-9 IS WATCHING" to "Moves without a fusion raise the AI TRACE. At 100\u00A0% NEXUS-9 locks a cell for a few moves. " +
+        "Keep fusing to stay hidden. A bad move? ROLLBACK takes it back.",
+)
+
+/** The tutorial: three short steps, always with a way out. */
+@Composable
+private fun TutorialCard(step: Int, onDone: () -> Unit) {
+    val (title, body) = TUTORIAL[step.coerceIn(0, TUTORIAL.size - 1)]
+    ConsolePanel(
+        Modifier.fillMaxWidth().wrapContentWidth().widthIn(max = 560.dp).padding(horizontal = 16.dp, vertical = 10.dp)
+            .height(196.dp),
+        edge = C.Amber
+    ) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("TRAINING ${step + 1}/${TUTORIAL.size}", style = mono(12.sp, C.Amber, 1.5.sp), modifier = Modifier.weight(1f))
+                if (step < TUTORIAL.size - 1) {
+                    Text(
+                        "SKIP TUTORIAL ▸", style = mono(13.sp, C.Mid, 1.sp),
+                        modifier = Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = click(onDone))
+                            .padding(vertical = 6.dp, horizontal = 4.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text("> $title", style = mono(17.sp, C.Bright, 1.sp))
+                    Spacer(Modifier.height(4.dp))
+                    Text(body, style = mono(13.sp, C.Mid, 0.sp))
+                }
+                if (step < 2) SwipeHand(vertical = false)
+            }
+            Spacer(Modifier.weight(1f))
+            if (step >= TUTORIAL.size - 1) {
+                CommandButton("JACK IN", Modifier.fillMaxWidth(), primary = true, height = 50.dp, onClick = onDone)
+            }
+        }
+    }
+}
+
+/** A hand that swipes sideways, so nobody has to read how to play. */
+@Composable
+private fun SwipeHand(vertical: Boolean) {
+    val t = rememberInfiniteTransition(label = "hand")
+    val x by t.animateFloat(-1f, 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "x")
+    Box(Modifier.width(64.dp).height(56.dp), contentAlignment = Alignment.Center) {
+        Icon(
+            Icons.Rounded.TouchApp, null, tint = C.Bright,
+            modifier = Modifier.size(34.dp).offset(x = if (vertical) 0.dp else (x * 16).dp, y = if (vertical) (x * 12).dp else 0.dp)
+        )
     }
 }
 

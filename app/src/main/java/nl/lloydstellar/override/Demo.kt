@@ -1,6 +1,7 @@
 package nl.lloydstellar.override
 
 import nl.lloydstellar.override.data.Store
+import nl.lloydstellar.override.engine.boardJson
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -85,18 +86,7 @@ object Demo {
             return null
         }
         val b = BOARDS[name] ?: return null
-        val cells = JSONArray()
-        b.rows.forEachIndexed { y, row ->
-            row.forEachIndexed { x, v ->
-                if (v != 0) cells.put(JSONArray().put(x).put(y).put(kotlin.math.abs(v)).put(if (v < 0) 1 else 0))
-            }
-        }
-        val locks = JSONArray()
-        b.locks.forEach { (x, y, t) -> locks.put(JSONArray().put(x).put(y).put(t)) }
-        val engine = JSONObject()
-            .put("cells", cells).put("locks", locks).put("score", b.score).put("moves", b.moves).put("trace", b.trace)
-            .put("max", b.max).put("won", b.won).put("keep", b.keep).put("state", "PLAYING").put("end", "NONE")
-            .put("rng", 20481).put("id", 1).put("peakTrace", b.trace)
+        val engine = boardJson(b.rows, b.score, b.moves, b.trace, b.locks, b.won, b.keep)
         store.reachTile(b.max)
         val save = JSONObject().put("engine", engine).put("history", JSONArray()).put("earned", JSONArray())
             .put("charges", 2).put("rollbacksUsed", 0).put("elapsed", b.moves * 1400L)

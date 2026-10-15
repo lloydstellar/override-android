@@ -33,7 +33,7 @@ import nl.lloydstellar.override.BuildConfig
 import nl.lloydstellar.override.data.Store
 
 @Composable
-fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit) {
+fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit, onTutorial: () -> Unit) {
     var confirm by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         Tube(dim = 0.2f)
@@ -55,6 +55,7 @@ fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit) {
                         TermToggle("SCREEN EFFECTS", "Shake, static and flashes. Also off when Android's animations are off.", store.effects) { store.changeEffects(it) }
                     }
                 }
+                CommandButton("PLAY THE TUTORIAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onTutorial)
                 DashedRule()
                 CommandButton("RESET RECORDS", Modifier.fillMaxWidth(), color = C.Red) { confirm = true }
                 Text("2048 Override ${BuildConfig.VERSION_NAME}", style = mono(12.sp, C.Dim, 1.sp))

@@ -23,10 +23,11 @@ import nl.lloydstellar.override.engine.MoveResult
 import nl.lloydstellar.override.engine.Rng
 import nl.lloydstellar.override.engine.SECTORS
 import nl.lloydstellar.override.engine.Sector
+import nl.lloydstellar.override.engine.boardJson
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class Mode { CLASSIC, SECTOR }
+enum class Mode { CLASSIC, SECTOR, TUTORIAL }
 
 /**
  * PLAYING and PAUSED are what they say. WON is the Override (Classic: go on
@@ -119,6 +120,59 @@ class GameController(private val store: Store) {
     /* ---------------- starting and stopping ---------------- */
 
     fun newClassic() = start(Mode.CLASSIC, null)
+
+    /* ---------------- the tutorial ---------------- */
+
+    /**
+     * 0: fuse two 2s, 1: fuse two 4s into an 8, 2: NEXUS-9 and the trace, read
+     * and go. The step moves on when the player makes the fusion; the next
+     * board is loaded by the screen once the slide has landed.
+     */
+    var tutorialStep by mutableIntStateOf(0); private set
+    /** The step the board on screen belongs to. */
+    private var tutorialBoard = -1
+
+    fun startTutorial() {
+        finishPending()
+        mode = Mode.TUTORIAL
+        sector = null
+        history.clear(); earned.clear(); historySize = 0
+        charges = 0; rollbacksUsed = 0
+        result = null; toasts.clear(); log.clear()
+        hint = null
+        active = false
+        pendingEnd = false
+        phase = Phase.PLAYING
+        tutorialStep = 0
+        tutorialBoard = -1
+        loadTutorialBoard()
+        Sfx.jackIn()
+        updateMusic()
+    }
+
+    /** Shows the board of the current step (called by the screen after the slide of the last fusion). */
+    fun loadTutorialBoard() {
+        if (mode != Mode.TUTORIAL || tutorialBoard == tutorialStep) return
+        tutorialBoard = tutorialStep
+        engine.restore(TUTORIAL_BOARDS[tutorialStep], TUTORIAL_RULES)
+        engine.settle()
+        log.clear()
+        when (tutorialStep) {
+            0 -> logLine("TRAINING LINK ESTABLISHED.", LogLine.Kind.OK)
+            1 -> logLine("FUSION CONFIRMED. KEEP GOING.", LogLine.Kind.OK)
+            else -> { logLine("TRACE 100%: NEXUS-9 SEALED CELL B2 (5 TURNS)", LogLine.Kind.WARN); Sfx.lock() }
+        }
+        fx.add(Fx.Snap)
+        sync()
+    }
+
+    private fun advanceTutorial(r: MoveResult) {
+        val goal = if (tutorialStep == 0) 4 else 8
+        if (tutorialStep < 2 && r.merges.any { it.value >= goal }) {
+            tutorialStep++
+            Sfx.unlock()
+        }
+    }
     fun newSector(s: Sector) = start(Mode.SECTOR, s)
     fun restart() = start(mode, sector)
 
@@ -160,6 +214,7 @@ class GameController(private val store: Store) {
 
     /** Picks up the saved game of [mode]. Returns false when there is none. */
     fun continueSaved(mode: Mode): Boolean {
+        if (mode == Mode.TUTORIAL) return false
         val o = (if (mode == Mode.CLASSIC) store.savedClassic else store.savedSector) ?: return false
         return try {
             val s = if (mode == Mode.SECTOR) SECTORS.first { it.number == o.getInt("sector") } else null
@@ -257,6 +312,7 @@ class GameController(private val store: Store) {
     /** Called by the GameView with a swipe. Returns what happened, or null if nothing moved. */
     fun move(dir: Int): MoveResult? {
         if (phase != Phase.PLAYING) return null
+        if (mode == Mode.TUTORIAL && (tutorialStep != tutorialBoard || tutorialStep >= 2)) return null
         val before = engine.toJson()
         val r = engine.move(dir) ?: return null
         history.addLast(before)
@@ -264,6 +320,7 @@ class GameController(private val store: Store) {
         historySize = history.size
         fx.add(Fx.Moved(r))
         feedback(r)
+        if (mode == Mode.TUTORIAL) advanceTutorial(r)
         sync()
         save()
         return r
@@ -511,7 +568,7 @@ class GameController(private val store: Store) {
     }
 
     fun updateMusic() {
-        val playing = active && (phase == Phase.PLAYING || (phase == Phase.WON && mode == Mode.CLASSIC))
+        val playing = (active || mode == Mode.TUTORIAL) && (phase == Phase.PLAYING || (phase == Phase.WON && mode == Mode.CLASSIC))
         Music.update(playing, store.sound, store.music)
     }
 
@@ -521,7 +578,7 @@ class GameController(private val store: Store) {
     }
 
     private fun showHint(id: String) {
-        if (store.hintSeen(id) || hint == id) return
+        if (mode == Mode.TUTORIAL || store.hintSeen(id) || hint == id) return
         if (hint != null && hint != "swipe") return
         hint = id
         hintMoves = 0
@@ -535,6 +592,7 @@ class GameController(private val store: Store) {
     fun dismissToast(a: Achievement) { toasts.remove(a) }
 
     private fun award(id: String) {
+        if (mode == Mode.TUTORIAL) return
         store.unlock(id)?.let {
             toasts.add(it)
             Sfx.hiscore()
@@ -543,6 +601,16 @@ class GameController(private val store: Store) {
     }
 
     companion object {
+        /* no trace, no nodes, only 2s: nothing distracts from the slide */
+        private val TUTORIAL_RULES = CLASSIC.copy(traceEmpty = 0, fourChance = 0.0, corruptFrom = 1 shl 30, endless = false, target = 1 shl 20)
+        private val TUTORIAL_BOARDS = listOf(
+            boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 0, 0), listOf(2, 0, 0, 2), listOf(0, 0, 0, 0))),
+            boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 2, 0), listOf(4, 0, 4, 0), listOf(8, 0, 0, 0)), score = 4, moves = 1),
+            boardJson(
+                listOf(listOf(2, 4, 8, 2), listOf(0, 0, 16, 4), listOf(0, 2, 32, 8), listOf(0, 0, 4, 2)),
+                score = 316, moves = 42, trace = 100, locks = listOf(Triple(1, 1, 5))
+            ),
+        )
         const val START_CHARGES = 1
         const val MAX_CHARGES = 3
     }
