@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.lloydstellar.override.audio.Sfx
+import nl.lloydstellar.override.data.DISPATCHES
 import nl.lloydstellar.override.data.FILES
 import nl.lloydstellar.override.data.PHOSPHORS
 import nl.lloydstellar.override.data.SIGNALS
@@ -70,7 +72,7 @@ fun ArchiveScreen(store: Store, onBack: () -> Unit, onOpen: (String) -> Unit, on
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 when (tab) {
-                    0 -> Files(store, onOpen, onBriefing)
+                    0 -> { Files(store, onOpen, onBriefing); Dispatches(store) }
                     1 -> Phosphors(store)
                     else -> Catalogue(best)
                 }
@@ -123,6 +125,40 @@ private fun Files(store: Store, onOpen: (String) -> Unit, onBriefing: () -> Unit
                         Spacer(Modifier.height(8.dp))
                     }
                     if (f.id == "f01") CommandButton("REPLAY THE BRIEFING", Modifier.fillMaxWidth(), color = C.Main, height = 46.dp, onClick = onBriefing)
+                }
+            }
+        }
+    }
+}
+
+/** One dispatch per month: clear every daily of that month to read it. */
+@Composable
+private fun Dispatches(store: Store) {
+    val months = remember { store.dispatchMonths() }
+    var open by rememberSaveable { mutableStateOf<String?>(null) }
+    Spacer(Modifier.height(6.dp))
+    Text("DISPATCHES", style = mono(13.sp, C.Main, 2.sp))
+    Text("One for every month. Clear all the Daily Directives of a month to decrypt its dispatch.", style = mono(12.sp, C.Mid, 0.sp))
+    DISPATCHES.forEachIndexed { i, f ->
+        val unlocked = (i + 1) in months
+        val expanded = open == f.id
+        ConsolePanel(
+            Modifier.fillMaxWidth().animateContentSize()
+                .clickable(enabled = unlocked, role = Role.Button, onClick = click { open = if (expanded) null else f.id }),
+            edge = if (unlocked) C.Main else C.Dim
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (unlocked) f.title else f.title + " // ENCRYPTED", style = mono(13.sp, if (unlocked) C.Bright else C.Dim, 1.sp),
+                        modifier = Modifier.weight(1f))
+                    Text(if (!unlocked) "" else if (expanded) "[-]" else "[+]", style = mono(12.sp, C.Main, 1.sp))
+                }
+                if (expanded) {
+                    Spacer(Modifier.height(8.dp))
+                    f.lines.forEach {
+                        Text(it, style = mono(14.sp, C.Mid, 0.sp))
+                        Spacer(Modifier.height(6.dp))
+                    }
                 }
             }
         }

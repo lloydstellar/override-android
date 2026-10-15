@@ -35,6 +35,8 @@ import nl.lloydstellar.override.data.signal
 import nl.lloydstellar.override.engine.Dir
 import nl.lloydstellar.override.engine.MoveResult
 import nl.lloydstellar.override.engine.Tile
+import nl.lloydstellar.override.engine.Sector
+import nl.lloydstellar.override.engine.threat
 import nl.lloydstellar.override.render.Sprites.Companion.drawMiddle
 import nl.lloydstellar.override.render.Sprites.Companion.withAlpha
 import kotlin.math.PI
@@ -143,7 +145,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
 
     private fun ensureBaked() {
         val l = lay ?: return
-        val key = "${width}x$height/${l.n}/${phosphor.id}/${game.mode}/${game.sector?.number}/${l.s}/${l.oy}"
+        val key = "${width}x$height/${l.n}/${phosphor.id}/${game.mode}/${game.sector?.id}/${game.level}/${l.s}/${l.oy}"
         if (key == bgKey && bg != null) return
         bgKey = key
         bg?.recycle(); overlay?.recycle()
@@ -178,7 +180,12 @@ class GameView(context: Context, private val game: GameController) : View(contex
         g.drawLine(h.left, h.bottom + 0.5f, h.right, h.bottom + 0.5f, stroke)
         txt.color = col(th.mid); txt.textSize = 7.5f; txt.textAlign = Paint.Align.LEFT; txt.letterSpacing = 0.05f
         val s = game.sector
-        val title = if (s != null) "${s.code} // ${s.name} // TARGET ${s.rules.target}" else "NEXUS-9 GRID // SECTOR 7 // MK-II"
+        val title = when {
+            s == null -> "NEXUS-9 GRID // SECTOR 7 // " + if (game.level == 0) "MK-II" else threat(game.level).short
+            s.kind == Sector.Kind.SECTOR -> "${s.code} // ${s.name} // TARGET ${s.rules.target}"
+            else -> "${s.name} // ${s.rules.target}"
+        }
+        Sprites.fitText(txt, title, h.width() * 0.56f)
         drawMiddle(g, title, h.left + 6f, h.centerY(), txt)
 
         /* HUD labels */

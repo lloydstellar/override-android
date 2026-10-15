@@ -24,10 +24,13 @@ import nl.lloydstellar.override.engine.Rng
 import nl.lloydstellar.override.engine.SECTORS
 import nl.lloydstellar.override.engine.Sector
 import nl.lloydstellar.override.engine.boardJson
+import nl.lloydstellar.override.engine.Directives
+import nl.lloydstellar.override.engine.threat
+import java.time.LocalDate
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class Mode { CLASSIC, SECTOR, TUTORIAL }
+enum class Mode { CLASSIC, SECTOR, DAILY, WEEKLY, TUTORIAL }
 
 /**
  * PLAYING and PAUSED are what they say. WON is the Override (Classic: go on
@@ -80,7 +83,14 @@ class Result(
 class GameController(private val store: Store) {
     val engine = Engine()
     var mode by mutableStateOf(Mode.CLASSIC); private set
+    /** The sector or directive being played, null in Classic. */
     var sector by mutableStateOf<Sector?>(null); private set
+    /** Threat level of a Classic session: -1 calm, 0 standard, 1..8. */
+    var level by mutableIntStateOf(0); private set
+    /** The sector assist: two extra rollback charges, offered after three lost attempts. */
+    var assisted by mutableStateOf(false); private set
+    /* the day a directive belongs to, to rebuild it from a save */
+    private var directiveDate: LocalDate? = null
 
     var phase by mutableStateOf(Phase.PLAYING); private set
     /* mirrored for Compose; the GameView reads the engine directly */
@@ -113,13 +123,32 @@ class GameController(private val store: Store) {
     private var pendingEnd = false
 
     val seconds: Int get() = ((elapsedMs + if (phase == Phase.PLAYING && resumedAt > 0) SystemClock.elapsedRealtime() - resumedAt else 0) / 1000).toInt()
-    val best: Int get() = if (mode == Mode.CLASSIC) maxOf(store.best, score) else 0
+    val best: Int get() = if (mode == Mode.CLASSIC) maxOf(store.bestFor(level), score) else 0
     val beatingRecord: Boolean get() = mode == Mode.CLASSIC && bestAtStart in 1 until score
-    val rules get() = sector?.rules ?: CLASSIC
+    val rules get() = sector?.rules ?: threat(level).rules
+    /** The most rollback charges this game can hold. */
+    val maxCharges: Int get() = rules.rollbackMax + if (assisted) ASSIST_CHARGES else 0
 
     /* ---------------- starting and stopping ---------------- */
 
-    fun newClassic() = start(Mode.CLASSIC, null)
+    fun newClassic(level: Int = store.lastLevel) {
+        this.level = level
+        store.chooseLevel(level)
+        assisted = false
+        start(Mode.CLASSIC, null)
+    }
+
+    fun newSector(s: Sector, assist: Boolean) {
+        assisted = assist
+        start(Mode.SECTOR, s)
+    }
+
+    /** A Daily or Weekly Directive of [date]. */
+    fun newDirective(s: Sector, date: LocalDate) {
+        assisted = false
+        directiveDate = date
+        start(if (s.kind == Sector.Kind.WEEKLY) Mode.WEEKLY else Mode.DAILY, s)
+    }
 
     /* ---------------- the tutorial ---------------- */
 
@@ -173,19 +202,18 @@ class GameController(private val store: Store) {
             Sfx.unlock()
         }
     }
-    fun newSector(s: Sector) = start(Mode.SECTOR, s)
     fun restart() = start(mode, sector)
 
     private fun start(mode: Mode, sector: Sector?) {
         finishPending()
         this.mode = mode
         this.sector = sector
-        engine.newGame(sector?.rules ?: CLASSIC, Rng.seeded())
+        engine.newGame(rules, sector?.seed?.let { Rng(it) } ?: Rng.seeded())
         history.clear(); earned.clear()
         historySize = 0
-        charges = START_CHARGES
+        charges = minOf(rules.rollbackStart + if (assisted) ASSIST_CHARGES else 0, maxCharges)
         rollbacksUsed = 0
-        bestAtStart = if (mode == Mode.CLASSIC) store.best else 0
+        bestAtStart = if (mode == Mode.CLASSIC) store.bestFor(level) else 0
         elapsedMs = 0
         resumedAt = SystemClock.elapsedRealtime()
         result = null
@@ -195,12 +223,17 @@ class GameController(private val store: Store) {
         pendingEnd = false
         phase = Phase.PLAYING
         if (sector != null) {
-            logLine("LINK ESTABLISHED. ${sector.code} ${sector.name} ONLINE.", LogLine.Kind.OK)
+            logLine(when (sector.kind) {
+                Sector.Kind.SECTOR -> "LINK ESTABLISHED. ${sector.code} ${sector.name} ONLINE."
+                Sector.Kind.DAILY -> "LINK ESTABLISHED. DAILY DIRECTIVE."
+                Sector.Kind.WEEKLY -> "LINK ESTABLISHED. WEEKLY DIRECTIVE."
+            }, LogLine.Kind.OK)
             logLine("TARGET: ${sector.rules.target} BIT.", LogLine.Kind.INFO)
         } else {
             logLine("LINK ESTABLISHED. SECTOR 7 GRID ONLINE.", LogLine.Kind.OK)
-            logLine("INJECT SIGNALS. TARGET: 2048 BIT.", LogLine.Kind.INFO)
+            logLine(if (level == 0) "INJECT SIGNALS. TARGET: 2048 BIT." else "${threat(level).name}. TARGET: 2048 BIT.", LogLine.Kind.INFO)
         }
+        if (assisted) logLine("ASSIST: ROLLBACK BUFFER PRELOADED [$charges]", LogLine.Kind.OK)
         Sfx.jackIn()
         store.countGame()
         award("first")
@@ -215,13 +248,22 @@ class GameController(private val store: Store) {
     /** Picks up the saved game of [mode]. Returns false when there is none. */
     fun continueSaved(mode: Mode): Boolean {
         if (mode == Mode.TUTORIAL) return false
-        val o = (if (mode == Mode.CLASSIC) store.savedClassic else store.savedSector) ?: return false
+        val o = slot(mode) ?: return false
         return try {
-            val s = if (mode == Mode.SECTOR) SECTORS.first { it.number == o.getInt("sector") } else null
+            val date = o.optString("date").takeIf { it.isNotEmpty() }?.let { LocalDate.parse(it) }
+            val s = when (mode) {
+                Mode.SECTOR -> SECTORS.first { it.number == o.getInt("sector") }
+                Mode.DAILY -> Directives.daily(date!!)
+                Mode.WEEKLY -> Directives.weekly(date!!)
+                else -> null
+            }
             finishPending()
             this.mode = mode
             this.sector = s
-            engine.restore(o.getJSONObject("engine"), s?.rules ?: CLASSIC)
+            this.level = o.optInt("level", 0)
+            this.assisted = o.optBoolean("assist")
+            this.directiveDate = date
+            engine.restore(o.getJSONObject("engine"), rules)
             engine.settle()
             history.clear()
             val h = o.optJSONArray("history") ?: JSONArray()
@@ -230,10 +272,10 @@ class GameController(private val store: Store) {
             earned.clear()
             val e = o.optJSONArray("earned") ?: JSONArray()
             for (i in 0 until e.length()) earned.add(e.getInt(i))
-            charges = o.optInt("charges", START_CHARGES)
+            charges = o.optInt("charges", rules.rollbackStart)
             rollbacksUsed = o.optInt("rollbacksUsed")
             elapsedMs = o.optLong("elapsed")
-            bestAtStart = if (mode == Mode.CLASSIC) store.best else 0
+            bestAtStart = if (mode == Mode.CLASSIC) store.bestFor(level) else 0
             result = null
             toasts.clear()
             log.clear()
@@ -252,7 +294,7 @@ class GameController(private val store: Store) {
             true
         } catch (e: Exception) {
             android.util.Log.w("Override", "saved game unreadable", e)
-            if (mode == Mode.CLASSIC) store.saveClassic(null) else store.saveSector(null)
+            writeSlot(mode, null)
             false
         }
     }
@@ -316,7 +358,7 @@ class GameController(private val store: Store) {
         val before = engine.toJson()
         val r = engine.move(dir) ?: return null
         history.addLast(before)
-        while (history.size > MAX_CHARGES) history.removeFirst()
+        while (history.size > maxOf(1, maxCharges)) history.removeFirst()
         historySize = history.size
         fx.add(Fx.Moved(r))
         feedback(r)
@@ -404,9 +446,9 @@ class GameController(private val store: Store) {
             8192 -> { award("t8192"); Sfx.speak("purge", 0.3) }
         }
         /* a rollback charge for every new big signal, once per value per game */
-        if (v >= 256 && earned.add(v) && charges < MAX_CHARGES) {
+        if (v >= 256 && earned.add(v) && charges < maxCharges) {
             charges++
-            logLine("ROLLBACK BUFFER CHARGED  [$charges/$MAX_CHARGES]", LogLine.Kind.OK)
+            logLine("ROLLBACK BUFFER CHARGED  [$charges/$maxCharges]", LogLine.Kind.OK)
             showHint("rollback")
         }
         if (store.reachTile(v)) {
@@ -429,7 +471,10 @@ class GameController(private val store: Store) {
         logLine(if (s == null) "OVERRIDE CODE ASSEMBLED. CORE OVERLOAD." else "${s.rules.target}-BIT PULSE INJECTED. ${s.code} CORE OFFLINE.", LogLine.Kind.OK)
         if (s == null) {
             store.countOverride(engine.moves)
+            store.winThreat(level)
             award("override")
+            if (level >= 4) award("threat4")
+            if (level >= 8) award("threat8")
             if (rollbacksUsed == 0) award("clean")
             if (engine.locksSuffered <= 3) award("cold")
             if (engine.wonAtMove < 1000) award("fast")
@@ -521,15 +566,28 @@ class GameController(private val store: Store) {
         var improved = false
         val s = sector
         if (s == null) {
-            rank = store.addRun(Run(e.score, e.maxTile, System.currentTimeMillis(), e.moves, seconds, e.won))
+            rank = store.addRun(Run(e.score, e.maxTile, System.currentTimeMillis(), e.moves, seconds, e.won, level))
         } else if (e.state == GameState.WON) {
             bars = 1 + (if (e.moves <= s.par) 1 else 0) + (if (e.locksSuffered <= s.lockBudget) 1 else 0)
-            improved = store.clearSector(s.number, bars, e.moves)
-            if (SECTORS.all { store.bars[it.number - 1] > 0 }) award("sectors")
-            if (SECTORS.all { store.bars[it.number - 1] == 3 }) award("bars")
+            if (s.kind == Sector.Kind.SECTOR) {
+                improved = store.clearSector(s.number, bars, e.moves)
+                if (SECTORS.all { store.bars[it.number - 1] > 0 }) award("sectors")
+                if (SECTORS.all { store.bars[it.number - 1] == 3 }) award("bars")
+            } else {
+                improved = store.clearDirective(s.id, bars, e.moves)
+                if (store.dailiesCleared >= 10) award("daily10")
+                if (store.weekliesCleared >= 4) award("weekly4")
+                val d = directiveDate
+                if (s.kind == Sector.Kind.DAILY && d != null && store.monthComplete(d)) {
+                    award("month")
+                    monthDecrypted = d
+                }
+            }
+        } else if (s.kind == Sector.Kind.SECTOR && e.endReason != EndReason.ABORTED) {
+            store.failSector(s.number)
         }
         result = buildResult(rank, e.score > bestAtStart && e.score > 0 && s == null, bars, improved)
-        if (mode == Mode.CLASSIC) store.saveClassic(null) else store.saveSector(null)
+        writeSlot(mode, null)
         active = false
     }
 
@@ -554,8 +612,10 @@ class GameController(private val store: Store) {
             .put("charges", charges)
             .put("rollbacksUsed", rollbacksUsed)
             .put("elapsed", elapsedMs)
+        o.put("level", level).put("assist", assisted)
         sector?.let { o.put("sector", it.number) }
-        if (mode == Mode.CLASSIC) store.saveClassic(o) else store.saveSector(o)
+        directiveDate?.let { if (mode == Mode.DAILY || mode == Mode.WEEKLY) o.put("date", it.toString()) }
+        writeSlot(mode, o)
     }
 
     /* ---------------- small things ---------------- */
@@ -600,7 +660,28 @@ class GameController(private val store: Store) {
         }
     }
 
+    /** Set when a daily completes a month; the screen shows the decrypted dispatch once. */
+    var monthDecrypted by mutableStateOf<LocalDate?>(null)
+
+    private fun slot(mode: Mode): JSONObject? = when (mode) {
+        Mode.CLASSIC -> store.savedClassic
+        Mode.SECTOR -> store.savedSector
+        Mode.DAILY -> store.savedDaily
+        Mode.WEEKLY -> store.savedWeekly
+        Mode.TUTORIAL -> null
+    }
+
+    private fun writeSlot(mode: Mode, o: JSONObject?) = when (mode) {
+        Mode.CLASSIC -> store.saveClassic(o)
+        Mode.SECTOR -> store.saveSector(o)
+        Mode.DAILY -> store.saveDaily(o)
+        Mode.WEEKLY -> store.saveWeekly(o)
+        Mode.TUTORIAL -> Unit
+    }
+
     companion object {
+        /** Extra rollback charges of the sector assist. */
+        const val ASSIST_CHARGES = 2
         /* no trace, no nodes, only 2s: nothing distracts from the slide */
         private val TUTORIAL_RULES = CLASSIC.copy(traceEmpty = 0, fourChance = 0.0, corruptFrom = 1 shl 30, endless = false, target = 1 shl 20)
         private val TUTORIAL_BOARDS = listOf(
@@ -611,7 +692,5 @@ class GameController(private val store: Store) {
                 score = 316, moves = 42, trace = 100, locks = listOf(Triple(1, 1, 5))
             ),
         )
-        const val START_CHARGES = 1
-        const val MAX_CHARGES = 3
     }
 }

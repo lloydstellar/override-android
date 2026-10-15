@@ -36,6 +36,9 @@ data class Rules(
     /** 0 = no limit; otherwise the target must fall within this many moves. */
     val moveLimit: Int = 0,
     val startTiles: List<StartTile> = emptyList(),
+    /** Rollback charges at the start, and the most you can hold (new in the app). */
+    val rollbackStart: Int = 1,
+    val rollbackMax: Int = 3,
 )
 
 /** The rules of the browser game, number for number. ParityTest plays these. */

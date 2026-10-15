@@ -19,8 +19,16 @@ class Sector(
     val rules: Rules,
     val par: Int,
     val lockBudget: Int = 0,
+    /** Campaign sector, or one of the generated directives (see Directives). */
+    val kind: Kind = Kind.SECTOR,
+    /** Where results are kept, and the short code on screen. */
+    val id: String = "S" + number.toString().padStart(2, '0'),
+    /** Directives use a fixed seed, so everybody gets the same spawns. */
+    val seed: Int? = null,
 ) {
-    val code get() = "S" + number.toString().padStart(2, '0')
+    enum class Kind { SECTOR, DAILY, WEEKLY }
+
+    val code get() = id
 }
 
 private val noNodes = 1 shl 30

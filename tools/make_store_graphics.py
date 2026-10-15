@@ -23,9 +23,9 @@ FONTS = os.path.join(ROOT, 'app/src/main/res/font')
 SCREENS = [
     ('01-game.png', 'Slide, fuse and build a 2048-bit pulse'),
     ('02-nodes.png', 'Purge rogue code with an EMP Cell'),
+    ('05-directives.png', 'A new puzzle every day, the same for everyone'),
     ('03-override.png', 'Overload the core of NEXUS-9'),
     ('04-sectors.png', 'Twelve sectors, each with a twist'),
-    ('05-wideband.png', 'Wider matrices, dead pixels, move limits'),
     ('07-archive.png', 'Decrypt the files of the resistance'),
     ('06-home.png', 'Free. No ads, no account, no internet'),
 ]

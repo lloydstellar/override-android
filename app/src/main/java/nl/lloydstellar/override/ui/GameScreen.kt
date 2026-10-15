@@ -155,7 +155,7 @@ fun GameScreen(
         }
         val res = game.result
         AnimatedVisibility(game.phase == Phase.WON, enter = fadeIn(tween(400, delayMillis = 1300)), exit = fadeOut(tween(150))) {
-            if (game.mode == Mode.CLASSIC) OverrideOverlay(game) else SectorClearOverlay(game, onMap)
+            if (game.mode == Mode.CLASSIC) OverrideOverlay(game) else SectorClearOverlay(game, onMap, onShare)
         }
         AnimatedVisibility(game.phase == Phase.RESULTS && res != null, enter = fadeIn(tween(250)), exit = fadeOut(tween(150))) {
             if (res != null) ResultsOverlay(game, res, onHome = onHome, onMap = onMap, onShare = { onShare(res) })
@@ -233,7 +233,7 @@ private fun BottomBar(game: GameController) {
     ) {
         IconCommand(Icons.Rounded.Pause, "Pause", size = 52.dp, onClick = { game.pause() })
         val charges = game.charges
-        val label = "ROLLBACK " + "■".repeat(charges) + "□".repeat(GameController.MAX_CHARGES - charges)
+        val label = if (game.maxCharges == 0) "NO ROLLBACK" else "ROLLBACK " + "■".repeat(charges) + "□".repeat((game.maxCharges - charges).coerceAtLeast(0))
         CommandButton(
             label, Modifier.weight(1f).semantics { contentDescription = "Rollback, $charges " + (if (charges == 1) "charge" else "charges") + " left" },
             color = C.Main, height = 52.dp, enabled = game.canRollback && game.phase == Phase.PLAYING
@@ -247,7 +247,7 @@ private val HINTS = mapOf(
     "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100\u00A0% NEXUS-9 locks a cell."),
     "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move."),
     "emp" to ("EMP CELL ONLINE" to "Your 64 fries any Corrupted Node that ends up right next to it, for 64 Hz."),
-    "rollback" to ("ROLLBACK BUFFER" to "ROLLBACK undoes your last move, spawn and trace included. You get a charge for every new 256, 512, 1024 and up, three at most."),
+    "rollback" to ("ROLLBACK BUFFER" to "ROLLBACK undoes your last move, spawn and trace included. You get a charge for every new 256, 512, 1024 and up, as far as the buffer holds."),
 )
 
 @Composable
@@ -325,7 +325,7 @@ private fun PauseOverlay(game: GameController, store: Store, onHome: () -> Unit)
         Spacer(Modifier.height(26.dp))
         CommandButton("RESUME", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.resume() }
         Spacer(Modifier.height(10.dp))
-        CommandButton(if (s != null) "RESTART SECTOR" else "NEW SESSION", Modifier.fillMaxWidth(), color = C.Main) { game.restart() }
+        CommandButton(if (s != null) "START OVER" else "NEW SESSION", Modifier.fillMaxWidth(), color = C.Main) { game.restart() }
         Spacer(Modifier.height(10.dp))
         CommandButton("END SESSION", Modifier.fillMaxWidth(), color = C.Main) { game.endSession() }
         Spacer(Modifier.height(10.dp))
@@ -371,22 +371,26 @@ private fun OverrideOverlay(game: GameController) {
 }
 
 @Composable
-private fun SectorClearOverlay(game: GameController, onMap: () -> Unit) {
+private fun SectorClearOverlay(game: GameController, onMap: () -> Unit, onShare: (Result) -> Unit) {
     val s = game.sector ?: return
+    val directive = s.kind != nl.lloydstellar.override.engine.Sector.Kind.SECTOR
     val r = game.result
     val e = game.engine
     val bars = r?.bars ?: 1
     val shown = remember { Animatable(0f) }
-    LaunchedEffect(s.number) {
+    LaunchedEffect(s.id) {
         delay(1500)
         for (i in 1..bars) { shown.animateTo(i.toFloat(), tween(320)); nl.lloydstellar.override.audio.Sfx.bar(i - 1) }
     }
     Scrim {
-        Text("SECTOR CLEAR", style = h1(34.sp))
+        Text(if (directive) "DIRECTIVE CLEAR" else "SECTOR CLEAR", style = h1(if (directive) 30.sp else 34.sp))
         Spacer(Modifier.height(10.dp))
         AmberStroke()
         Spacer(Modifier.height(10.dp))
-        Text("${s.code} ${s.name}  //  ${s.rules.target}-BIT PULSE INJECTED", style = mono(13.sp, C.Green, 1.sp))
+        Text(
+            (if (directive) s.name else "${s.code} ${s.name}") + "  //  ${s.rules.target}-BIT PULSE INJECTED",
+            style = mono(13.sp, C.Green, 1.sp)
+        )
         Spacer(Modifier.height(16.dp))
         ConsolePanel(Modifier.fillMaxWidth(), edge = C.Amber) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
@@ -396,7 +400,7 @@ private fun SectorClearOverlay(game: GameController, onMap: () -> Unit) {
                     Column {
                         Text("SIGNAL BARS", style = mono(11.sp, C.Mid, 1.5.sp))
                         Text("$bars OF 3", style = mono(24.sp, C.Bright, 1.sp))
-                        if (r?.barsImproved == true && bars > 1) Text("NEW RECORD FOR THIS SECTOR", style = mono(11.sp, C.Amber, 1.sp))
+                        if (r?.barsImproved == true && bars > 1) Text(if (directive) "NEW RECORD FOR THIS DIRECTIVE" else "NEW RECORD FOR THIS SECTOR", style = mono(11.sp, C.Amber, 1.sp))
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -407,10 +411,18 @@ private fun SectorClearOverlay(game: GameController, onMap: () -> Unit) {
                 LeaderRow(lockGoal(s.lockBudget), if (ok) "YES (${e.locksSuffered})" else "NO (${e.locksSuffered})", if (ok) C.Green else C.Dim)
             }
         }
+        game.monthDecrypted?.let { d ->
+            Spacer(Modifier.height(12.dp))
+            Text("EVERY DAILY OF ${d.month.name} CLEARED. ${nl.lloydstellar.override.data.DISPATCHES[d.monthValue - 1].title} IS DECRYPTED IN THE ARCHIVE.",
+                style = mono(12.sp, C.Green, 0.5.sp))
+        }
         Spacer(Modifier.height(18.dp))
-        val next = SECTORS.getOrNull(s.number)
-        if (next != null) {
-            CommandButton("NEXT: ${next.code} ${next.name}", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.newSector(next) }
+        val next = if (directive) null else SECTORS.getOrNull(s.number)
+        if (directive) {
+            game.result?.let { res -> CommandButton("SHARE", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { onShare(res) } }
+            Spacer(Modifier.height(10.dp))
+        } else if (next != null) {
+            CommandButton("NEXT: ${next.code} ${next.name}", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.newSector(next, false) }
             Spacer(Modifier.height(10.dp))
         } else {
             Text("ALL TWELVE SECTORS ARE FREE. THE GRID IS OURS.", style = mono(14.sp, C.Amber, 1.sp))
@@ -418,7 +430,7 @@ private fun SectorClearOverlay(game: GameController, onMap: () -> Unit) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CommandButton("RETRY", Modifier.weight(1f), color = C.Main) { game.restart() }
-            CommandButton("MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
+            CommandButton(if (directive) "DIRECTIVES" else "MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
         }
     }
 }
@@ -452,7 +464,8 @@ private fun ResultsOverlay(game: GameController, r: Result, onHome: () -> Unit, 
                 Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
                     Text("FINAL FREQUENCY", style = mono(12.sp, C.Mid, 1.5.sp))
                     Text("${pad(count.value.toInt(), 6)} Hz", style = mono(42.sp, C.Bright, 2.sp))
-                    if (r.rank > 0) Text("#${r.rank} OF YOUR SESSIONS", style = mono(13.sp, if (r.rank == 1) C.Amber else C.Mid, 1.5.sp))
+                    if (r.mode == Mode.CLASSIC) Text(nl.lloydstellar.override.engine.threat(game.level).name, style = mono(12.sp, C.Mid, 1.sp))
+                    if (r.rank > 0) Text("#${r.rank} OF YOUR SESSIONS AT THIS LEVEL", style = mono(13.sp, if (r.rank == 1) C.Amber else C.Mid, 1.5.sp))
                     if (r.sector != null) Text("${r.sector.code} ${r.sector.name}  //  TARGET ${r.sector.rules.target}", style = mono(13.sp, C.Mid, 1.sp))
                     Spacer(Modifier.height(12.dp))
                     DashedRule()
@@ -478,12 +491,18 @@ private fun ResultsOverlay(game: GameController, r: Result, onHome: () -> Unit, 
                 CommandButton("ROLLBACK LAST MOVE", Modifier.fillMaxWidth(), color = C.Amber, trailing = "${game.charges} LEFT") { game.rollback() }
                 Spacer(Modifier.height(10.dp))
             }
-            CommandButton(if (r.mode == Mode.SECTOR) "RETRY SECTOR" else "NEW SESSION", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.restart() }
+            CommandButton(
+                when (r.mode) { Mode.SECTOR -> "RETRY SECTOR"; Mode.DAILY, Mode.WEEKLY -> "RETRY"; else -> "NEW SESSION" },
+                Modifier.fillMaxWidth(), primary = true, height = 60.dp
+            ) { game.restart() }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CommandButton("HOME", Modifier.weight(1f), color = C.Main, onClick = onHome)
-                if (r.mode == Mode.SECTOR) CommandButton("MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
-                else CommandButton("SHARE", Modifier.weight(1f), color = C.Main, onClick = onShare)
+                when (r.mode) {
+                    Mode.SECTOR -> CommandButton("MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
+                    Mode.DAILY, Mode.WEEKLY -> CommandButton("DIRECTIVES", Modifier.weight(1f), color = C.Main, onClick = onMap)
+                    else -> CommandButton("SHARE", Modifier.weight(1f), color = C.Main, onClick = onShare)
+                }
             }
         }
     }

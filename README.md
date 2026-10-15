@@ -14,9 +14,9 @@ permission and keeps scores and achievements on the phone.
 
 <p>
   <img src="tools/store/screen-01.png" width="200" alt="A game late in a session, with a NEXUS-9 lock and a Corrupted Node">
-  <img src="tools/store/screen-03.png" width="200" alt="The Override: the AI core goes down">
-  <img src="tools/store/screen-04.png" width="200" alt="The twelve sectors">
-  <img src="tools/store/screen-06.png" width="200" alt="The archive with the decrypted files">
+  <img src="tools/store/screen-03.png" width="200" alt="The Daily and Weekly Directives with the month calendar">
+  <img src="tools/store/screen-04.png" width="200" alt="The Override: the AI core goes down">
+  <img src="tools/store/screen-05.png" width="200" alt="The twelve sectors">
 </p>
 
 ## What is new in the app
@@ -24,7 +24,11 @@ permission and keeps scores and achievements on the phone.
 - **Classic** uses the browser's rules with a sharper AI Trace (see below). The engine itself matches the browser move for move; `ParityTest` proves it (see Tests).
 - **Sectors**: twelve levels with their own twist on the rules: a faster trace, Corrupted Nodes from the first move, a 5 x 5 and a 3 x 3 matrix, burned-out cells, a move limit, longer locks, and the NEXUS core at the end. Up to three signal bars each (cleared, within par, NEXUS-9 kept under the sector's lock limit).
 - **Rollback**: undo the last move, spawn and trace included. One charge at the start, one more for every new 256, 512, 1024 and up, three at most. The random generator is restored too, so a rollback cannot be used to fish for a better spawn.
-- **20 achievements**, top 20 sessions, lifetime stats.
+- **Threat levels** for Classic: CALM (the browser's rules, more rollbacks), STANDARD, and THREAT 1 to 8, a ladder where each rung adds one rule and opens after an Override on the rung below. Records per level.
+- **Daily and Weekly Directives**, generated from the date (`Directives.kt`), so every player gets the same twist, board and spawns without a server. A daily is a 256 with one twist (a few minutes); a weekly is a 1024 with two. Missed days stay playable in a month calendar, there is no streak to lose, and clearing every daily of a month decrypts that month's dispatch in the archive. Results can be shared as text.
+- **A sector assist**: after three lost attempts at a sector, its briefing offers two extra rollback charges. Opt-in, nothing changes behind the player's back.
+- **A three-step tutorial** for new players (about thirty seconds, skippable, replayable from the settings).
+- **25 achievements**, top 20 sessions per level, lifetime stats.
 - One-time hints the first time a Corrupted Node, a high trace, a lock or an EMP Cell shows up.
 - Haptics, a sector briefing screen, a boot intro, landscape layout for tablets, foldables and Chromebooks, keyboard controls (arrows, WASD, HJKL, U or Z for rollback), and TalkBack support (the board is read row by row and the four slides are accessibility actions).
 
@@ -91,7 +95,14 @@ targets and par values in `Sectors.kt` come from it:
 ```
 ./gradlew :app:testDebugUnitTest --tests '*SectorBalanceSim*' -Psim=200
 ./gradlew :app:testDebugUnitTest --tests '*ClassicTuningSim*' -Psim=150
+./gradlew :app:testDebugUnitTest --tests '*DirectiveBalanceSim*' -Psim=8
 ```
+
+`DirectiveBalanceSim` plays the real dailies of the coming 120 days and the
+weeklies of the coming 26 weeks, plus every threat level, and reports per
+twist how often the bars are earned. The factors in `Directives.kt` come from
+it. `DirectivesTest` checks that a directive is the same for everybody and
+that every daily and weekly of a year starts on a playable board.
 
 ## What is where
 

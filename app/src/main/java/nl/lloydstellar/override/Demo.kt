@@ -79,6 +79,11 @@ object Demo {
             store.reachTile(4096)
             return null
         }
+        if (name == "fails") {
+            /* three lost attempts at sector 1, so its briefing offers the assist */
+            repeat(3) { store.failSector(1) }
+            return null
+        }
         if (name == "progress") {
             /* a campaign under way, for the screenshots of the sector map */
             listOf(3, 3, 2, 3, 1, 2).forEachIndexed { i, bars -> store.clearSector(i + 1, bars, 150 + i * 40) }

@@ -46,7 +46,10 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import nl.lloydstellar.override.data.Store
 import nl.lloydstellar.override.data.signal
+import nl.lloydstellar.override.engine.Directives
 import nl.lloydstellar.override.engine.SECTORS
+import nl.lloydstellar.override.engine.threat
+import java.time.LocalDate
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -60,8 +63,10 @@ import java.util.Locale
 fun HomeScreen(
     store: Store,
     onContinue: () -> Unit,
-    onNew: () -> Unit,
+    /** A new Classic session at a threat level. */
+    onStart: (Int) -> Unit,
     onSectors: () -> Unit,
+    onDirectives: () -> Unit,
     onRecords: () -> Unit,
     onArchive: () -> Unit,
     onSettings: () -> Unit,
@@ -72,6 +77,8 @@ fun HomeScreen(
     LaunchedEffect(Unit) { shown = true }
     val appear by animateFloatAsState(if (shown) 1f else 0f, tween(450), label = "appear")
     val saved = store.savedClassic
+    var choosing by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = choosing) { choosing = false }
 
     Box(Modifier.fillMaxSize()) {
         Tube(dim = 0f)
@@ -105,17 +112,18 @@ fun HomeScreen(
                 if (saved != null) {
                     val score = saved.optJSONObject("engine")?.optInt("score") ?: 0
                     CommandButton("CONTINUE", Modifier.fillMaxWidth(), primary = true, height = 60.dp,
-                        trailing = "${pad(score, 6)} Hz", onClick = onContinue)
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CommandButton("NEW SESSION", Modifier.weight(1f), onClick = onNew)
-                        SectorsButton(store, Modifier.weight(1f), onSectors)
-                    }
+                        trailing = "${threat(saved.optInt("level")).short}  ${pad(score, 6)} Hz", onClick = onContinue)
                 } else {
-                    CommandButton("JACK IN", Modifier.fillMaxWidth(), primary = true, height = 60.dp, trailing = "CLASSIC", onClick = onNew)
-                    Spacer(Modifier.height(10.dp))
-                    SectorsButton(store, Modifier.fillMaxWidth(), onSectors)
+                    CommandButton("JACK IN", Modifier.fillMaxWidth(), primary = true, height = 60.dp,
+                        trailing = threat(store.lastLevel).short, onClick = { onStart(store.lastLevel) })
                 }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CommandButton("NEW SESSION", Modifier.weight(1f), onClick = { choosing = true })
+                    SectorsButton(store, Modifier.weight(1f), onSectors)
+                }
+                Spacer(Modifier.height(10.dp))
+                DirectivesButton(store, onDirectives)
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CommandButton("RECORDS", Modifier.weight(1f), color = C.Main, height = 46.dp, onClick = onRecords)
@@ -130,7 +138,21 @@ fun HomeScreen(
                 Spacer(Modifier.height(8.dp))
             }
         }
+        if (choosing) ThreatSheet(store, onStart = { choosing = false; onStart(it) }, onClose = { choosing = false })
     }
+}
+
+/** Today's daily: NEW until it is played, then its bars. */
+@Composable
+private fun DirectivesButton(store: Store, onClick: () -> Unit) {
+    val id = Directives.dailyId(LocalDate.now())
+    val bars = store.directiveBars(id)
+    val played = store.directiveBest(id) > 0 || bars > 0
+    CommandButton(
+        "DAILY DIRECTIVE", Modifier.fillMaxWidth(),
+        trailing = if (bars > 0) "■".repeat(bars) + "□".repeat(3 - bars) else if (played) "RETRY" else "NEW",
+        onClick = onClick
+    )
 }
 
 @Composable

@@ -29,6 +29,8 @@ import nl.lloydstellar.override.data.ACHIEVEMENTS
 import nl.lloydstellar.override.data.Store
 import nl.lloydstellar.override.data.signal
 import nl.lloydstellar.override.engine.SECTORS
+import nl.lloydstellar.override.engine.THREATS
+import nl.lloydstellar.override.engine.threat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,7 +65,7 @@ fun RecordsScreen(store: Store, onBack: () -> Unit) {
 /** Your top Classic sessions, laid out like the hall of fame on lloydstellar.nl. */
 @Composable
 private fun Sessions(store: Store) {
-    val runs = store.runs
+    val runs = store.runs.take(20)
     if (runs.isEmpty()) {
         Empty("No sessions yet. NEXUS-9 is waiting.")
         return
@@ -72,7 +74,7 @@ private fun Sessions(store: Store) {
     ConsolePanel(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Text("* FREQUENCY INJECTORS *", style = mono(12.sp, C.Main, 1.sp))
-            Text("YOUR TOP ${runs.size}  //  CLASSIC", style = mono(11.sp, C.Dim, 1.sp))
+            Text("YOUR BEST ${runs.size}  //  CLASSIC, EVERY LEVEL", style = mono(11.sp, C.Dim, 1.sp))
             Spacer(Modifier.height(6.dp))
             runs.forEachIndexed { i, r ->
                 val first = i == 0
@@ -81,7 +83,7 @@ private fun Sessions(store: Store) {
                     Column(Modifier.weight(1f)) {
                         Text("${pad(r.score, 6)} Hz", style = mono(19.sp, if (first) C.Amber else C.Bright, 1.sp))
                         Text(
-                            "${fmt.format(Date(r.time)).uppercase()}  ${r.moves} MOVES" + if (r.won) "  OVERRIDE" else "",
+                            "${threat(r.level).short}  ${fmt.format(Date(r.time)).uppercase()}  ${r.moves} MOVES" + if (r.won) "  OVERRIDE" else "",
                             style = mono(11.sp, if (r.won) C.Green else C.Dim, 0.5.sp), maxLines = 1
                         )
                     }
@@ -100,7 +102,10 @@ private fun Stats(store: Store) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Text("* LIFETIME *", style = mono(12.sp, C.Main, 1.sp))
             Spacer(Modifier.height(4.dp))
-            LeaderRow("BEST FREQUENCY", "${pad(store.best, 6)} Hz", C.Amber)
+            THREATS.filter { store.bestFor(it.level) > 0 }.forEach {
+                LeaderRow("BEST // ${it.short}", "${pad(store.bestFor(it.level), 6)} Hz", C.Amber)
+            }
+            LeaderRow("THREAT CLEARED", (THREATS.filter { store.overrideAt(it.level) }.maxOfOrNull { it.level } ?: -2).let { if (it < -1) "-" else threat(it).short })
             LeaderRow("HIGHEST SIGNAL", if (store.bestTile > 0) "${store.bestTile} ${signal(store.bestTile).name}" else "-")
             LeaderRow("OVERRIDES", store.overrides.toString())
             LeaderRow("FASTEST OVERRIDE", if (store.fastestOverride > 0) "${store.fastestOverride} MOVES" else "-")
@@ -112,6 +117,8 @@ private fun Stats(store: Store) {
             LeaderRow("NEXUS-9 LOCKS", "%,d".format(en, store.locks))
             LeaderRow("ROLLBACKS", store.rollbacks.toString())
             LeaderRow("SECTORS CLEARED", "${SECTORS.count { store.bars[it.number - 1] > 0 }}/${SECTORS.size}")
+            LeaderRow("DAILIES CLEARED", store.dailiesCleared.toString())
+            LeaderRow("WEEKLIES CLEARED", store.weekliesCleared.toString())
             LeaderRow("TIME ON THE GRID", formatTime(store.seconds.toInt()))
         }
     }

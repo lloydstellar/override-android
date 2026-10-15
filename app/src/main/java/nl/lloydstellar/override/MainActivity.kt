@@ -38,6 +38,7 @@ import nl.lloydstellar.override.render.Sprites
 import nl.lloydstellar.override.ui.AboutScreen
 import nl.lloydstellar.override.ui.ArchiveScreen
 import nl.lloydstellar.override.ui.C
+import nl.lloydstellar.override.ui.DirectivesScreen
 import nl.lloydstellar.override.ui.GameScreen
 import nl.lloydstellar.override.ui.HomeScreen
 import nl.lloydstellar.override.ui.IntroScreen
@@ -61,7 +62,7 @@ object App {
     }
 }
 
-enum class Screen { INTRO, HOME, GAME, SECTORS, ARCHIVE, RECORDS, SETTINGS, ABOUT }
+enum class Screen { INTRO, HOME, GAME, SECTORS, DIRECTIVES, ARCHIVE, RECORDS, SETTINGS, ABOUT }
 
 class MainActivity : ComponentActivity() {
 
@@ -106,13 +107,25 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun share(r: Result) {
+        val s = r.sector
+        if (s != null && s.kind != nl.lloydstellar.override.engine.Sector.Kind.SECTOR) {
+            val bars = "■".repeat(r.bars) + "□".repeat(3 - r.bars)
+            val what = if (s.kind == nl.lloydstellar.override.engine.Sector.Kind.WEEKLY) "Weekly Directive ${s.id.removePrefix("W")}"
+            else "Daily Directive ${s.id.removePrefix("D")}"
+            send("2048 Override // $what // ${s.name.substringAfter("// ")}\n$bars in ${r.moves} moves\nlloydstellar.nl/override.html")
+            return
+        }
         val body = "I reached ${"%,d".format(java.util.Locale.ENGLISH, r.score)} Hz and built a ${r.tile} ${signal(r.tile).title} in 2048 Override. " +
             "Fight NEXUS-9 yourself: lloydstellar.nl/override.html"
+        send(body)
+    }
+
+    private fun send(text: String) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, body)
+            putExtra(Intent.EXTRA_TEXT, text)
         }
-        startActivity(Intent.createChooser(send, "Share your frequency"))
+        startActivity(Intent.createChooser(send, "Share your result"))
     }
 
     @Composable
@@ -124,8 +137,8 @@ class MainActivity : ComponentActivity() {
         var playing by rememberSaveable { mutableStateOf(Mode.CLASSIC) }
         fun play(mode: Mode) { playing = mode; screen = Screen.GAME }
         /* new players get the three-step tutorial before their first session */
-        fun newClassic() {
-            if (store.hintSeen("tutorial")) game.newClassic() else game.startTutorial()
+        fun newClassic(level: Int = store.lastLevel) {
+            if (store.hintSeen("tutorial")) game.newClassic(level) else game.startTutorial()
             play(if (store.hintSeen("tutorial")) Mode.CLASSIC else Mode.TUTORIAL)
         }
         fun tutorialDone() {
@@ -141,9 +154,10 @@ class MainActivity : ComponentActivity() {
             val sector = demo?.removePrefix("sector")?.toIntOrNull()?.let { n -> nl.lloydstellar.override.engine.SECTORS.getOrNull(n - 1) }
             if (sector != null) {
                 store.markHint("intro")
-                game.newSector(sector)
+                game.newSector(sector, false)
                 play(Mode.SECTOR)
             } else if (demo != null) {
+                store.markHint("intro"); store.markHint("tutorial")
                 val mode = Demo.load(demo, store)
                 if (mode != null && game.continueSaved(mode)) {
                     store.markHint("intro")
@@ -185,8 +199,9 @@ class MainActivity : ComponentActivity() {
                     Screen.HOME -> HomeScreen(
                         store,
                         onContinue = { if (game.continueSaved(Mode.CLASSIC)) play(Mode.CLASSIC) },
-                        onNew = { newClassic() },
+                        onStart = { newClassic(it) },
                         onSectors = { screen = Screen.SECTORS },
+                        onDirectives = { screen = Screen.DIRECTIVES },
                         onRecords = { screen = Screen.RECORDS },
                         onArchive = { screen = Screen.ARCHIVE },
                         onSettings = { screen = Screen.SETTINGS },
@@ -196,15 +211,28 @@ class MainActivity : ComponentActivity() {
                     Screen.GAME -> GameScreen(
                         game, store,
                         onHome = { home() },
-                        onMap = { game.leave(); screen = Screen.SECTORS },
+                        onMap = {
+                            val directive = game.mode == Mode.DAILY || game.mode == Mode.WEEKLY
+                            game.leave()
+                            screen = if (directive) Screen.DIRECTIVES else Screen.SECTORS
+                        },
                         onShare = { share(it) },
                         onTutorialDone = { tutorialDone() },
                     )
                     Screen.SECTORS -> SectorsScreen(
                         store,
                         onBack = { screen = Screen.HOME },
-                        onStart = { game.newSector(it); play(Mode.SECTOR) },
+                        onStart = { s, assist -> game.newSector(s, assist); play(Mode.SECTOR) },
                         onContinue = { if (game.continueSaved(Mode.SECTOR)) play(Mode.SECTOR) },
+                    )
+                    Screen.DIRECTIVES -> DirectivesScreen(
+                        store,
+                        onBack = { screen = Screen.HOME },
+                        onStart = { s, date ->
+                            game.newDirective(s, date)
+                            play(if (s.kind == nl.lloydstellar.override.engine.Sector.Kind.WEEKLY) Mode.WEEKLY else Mode.DAILY)
+                        },
+                        onContinue = { mode -> if (game.continueSaved(mode)) play(mode) },
                     )
                     Screen.ARCHIVE -> ArchiveScreen(store, onBack = { screen = Screen.HOME }, onOpen = { open(it) }, onBriefing = { screen = Screen.INTRO })
                     Screen.RECORDS -> RecordsScreen(store) { screen = Screen.HOME }

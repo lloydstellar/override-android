@@ -41,7 +41,7 @@ import nl.lloydstellar.override.engine.Sector
 
 /** The campaign: twelve sectors, each opened by clearing the one before. */
 @Composable
-fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector) -> Unit, onContinue: () -> Unit) {
+fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector, Boolean) -> Unit, onContinue: () -> Unit) {
     var open by rememberSaveable { mutableStateOf<Int?>(null) }
     val saved = store.savedSector
     val savedNumber = saved?.optInt("sector")
@@ -70,7 +70,12 @@ fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector) -> Unit, o
         }
         AnimatedVisibility(open != null, enter = fadeIn(tween(150)), exit = fadeOut(tween(150))) {
             val s = SECTORS.firstOrNull { it.number == open }
-            if (s != null) Briefing(store, s, onClose = { open = null }, onStart = { open = null; onStart(s) })
+            if (s != null) Briefing(
+                s, bars = store.bars[s.number - 1], best = store.sectorBest[s.number - 1],
+                savedHere = store.savedSector?.optInt("sector") == s.number,
+                assistOffered = store.sectorFails[s.number - 1] >= 3,
+                onClose = { open = null }, onStart = { assist -> open = null; onStart(s, assist) }
+            )
         }
     }
 }
@@ -104,9 +109,17 @@ private fun SectorRow(store: Store, s: Sector, onClick: () -> Unit) {
     }
 }
 
-/** The briefing before a sector: the story, the twist, the target and the par. */
+/**
+ * The briefing before a sector or a directive: the story, the twist, the
+ * target, par and the lock limit. After three lost attempts at a sector it
+ * offers the assist (two extra rollback charges); the player decides.
+ */
 @Composable
-private fun Briefing(store: Store, s: Sector, onClose: () -> Unit, onStart: () -> Unit) {
+fun Briefing(
+    s: Sector, bars: Int, best: Int, savedHere: Boolean, assistOffered: Boolean,
+    onClose: () -> Unit, onStart: (Boolean) -> Unit, kicker: String = "${s.code} // BRIEFING",
+) {
+    var assist by remember { mutableStateOf(false) }
     Box(
         Modifier.fillMaxSize().background(C.Void.copy(alpha = 0.9f))
             .clickable(remember { MutableInteractionSource() }, null, onClick = onClose),
@@ -119,7 +132,7 @@ private fun Briefing(store: Store, s: Sector, onClose: () -> Unit, onStart: () -
             edge = C.Amber
         ) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp)) {
-                Text("${s.code} // BRIEFING", style = mono(12.sp, C.Amber, 1.5.sp))
+                Text(kicker, style = mono(12.sp, C.Amber, 1.5.sp))
                 Spacer(Modifier.height(4.dp))
                 Text(s.name, style = h1(30.sp))
                 Spacer(Modifier.height(8.dp))
@@ -143,15 +156,17 @@ private fun Briefing(store: Store, s: Sector, onClose: () -> Unit, onStart: () -
                 if (s.rules.moveLimit > 0) LeaderRow("MOVE LIMIT", s.rules.moveLimit.toString(), C.Red)
                 LeaderRow("PAR", "${s.par} MOVES")
                 LeaderRow("THIRD BAR", lockGoal(s.lockBudget))
-                val best = store.sectorBest[s.number - 1]
                 LeaderRow("YOUR BEST", if (best > 0) "$best MOVES" else "-", if (best > 0) C.Amber else C.Dim)
                 Row(Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("BARS", style = mono(14.sp, C.Mid, 1.sp), modifier = Modifier.weight(1f))
-                    Bars(store.bars[s.number - 1], size = 20.dp)
+                    Bars(bars, size = 20.dp)
+                }
+                if (assistOffered) {
+                    DashedRule()
+                    TermToggle("ASSIST", "Three tries without a clear. Start with ${nl.lloydstellar.override.GameController.ASSIST_CHARGES} extra rollback charges?", assist) { assist = it }
                 }
                 Spacer(Modifier.height(10.dp))
-                val savedHere = store.savedSector?.optInt("sector") == s.number
-                CommandButton(if (savedHere) "START OVER" else "JACK IN", Modifier.fillMaxWidth(), primary = true, height = 58.dp, onClick = onStart)
+                CommandButton(if (savedHere) "START OVER" else "JACK IN", Modifier.fillMaxWidth(), primary = true, height = 58.dp) { onStart(assist) }
                 Spacer(Modifier.height(10.dp))
                 CommandButton("BACK", Modifier.fillMaxWidth(), color = C.Main, onClick = onClose)
             }

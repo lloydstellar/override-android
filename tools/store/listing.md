@@ -35,12 +35,17 @@ Twelve sectors, each with its own twist:
 • the NEXUS core itself, with every rule at full strength
 Every sector gives up to three signal bars: one for the clear, one for staying under par, one for keeping NEXUS-9 under its lock limit.
 
+Every day there is a new Daily Directive: a short board with one twist, the same for every player, done in a few minutes. Every week a Weekly Directive asks for a 1024 with two twists at once. Missed a day? The calendar keeps it playable, there is no streak to lose, and a full month decrypts a new dispatch from the resistance.
+
+Play Classic your way. CALM keeps the AI quiet and gives you more rollbacks; STANDARD is the game as intended; THREAT 1 to 8 is a ladder for puzzlers where every rung adds one rule.
+
 Made a bad move? ROLLBACK undoes it, spawn included. You earn the charges by building big signals, so it helps without making the game trivial.
 
 Every tile is a piece of resistance hardware with its own icon, from a 2 Hz Sub-Pulse to the Quantum Transmitter. The soundtrack is a dark electro loop, generated live, that speeds up as your highest signal grows. Reach the Override Code and the terminal speaks. Bigger signals unlock phosphor colours for the tube and decrypt the files of the resistance.
 
 Also in the app:
-• 20 achievements, your top sessions and lifetime stats
+• 25 achievements, your top sessions per threat level and lifetime stats
+• a 30 second tutorial you can skip
 • haptics on every slide, fusion and lock
 • your session is saved after every move, so leaving costs nothing
 • swipe, or use the arrow keys or WASD on a keyboard
@@ -71,12 +76,17 @@ Twaalf sectoren, elk met een eigen twist:
 • de NEXUS-kern zelf, met elke regel op volle sterkte
 Elke sector geeft tot drie signaalbalken: een voor het halen, een voor binnen par blijven, een voor NEXUS-9 onder zijn lock-limiet houden.
 
+Elke dag is er een nieuwe Daily Directive: een kort bord met één twist, voor iedereen hetzelfde, in een paar minuten gespeeld. Elke week vraagt een Weekly Directive om een 1024 met twee twists tegelijk. Een dag gemist? De kalender houdt hem speelbaar, er is geen streak om kwijt te raken, en een volle maand ontsleutelt een nieuw bericht van het verzet.
+
+Speel Classic zoals jij wilt. CALM houdt de AI rustig en geeft je meer rollbacks, STANDARD is het spel zoals bedoeld, THREAT 1 tot 8 is een ladder voor puzzelaars waarin elke trede één regel toevoegt.
+
 Een slechte zet gedaan? ROLLBACK draait hem terug, inclusief de nieuwe tegel. De ladingen verdien je door grote signalen te bouwen, dus het helpt zonder dat het spel te makkelijk wordt.
 
 Elke tegel is een stuk verzetshardware met een eigen icoon, van een 2 Hz Sub-Pulse tot de Quantum Transmitter. De soundtrack is een donkere electroloop die live wordt gegenereerd en sneller gaat naarmate je hoogste signaal groeit. Haal de Override Code en de terminal spreekt. Grotere signalen ontgrendelen fosforkleuren voor de beeldbuis en ontsleutelen de bestanden van het verzet.
 
 Verder in de app:
-• 20 achievements, je beste sessies en statistieken
+• 25 achievements, je beste sessies per dreigingsniveau en statistieken
+• een tutorial van 30 seconden die je kunt overslaan
 • haptische feedback bij elke schuif, fusie en vergrendeling
 • je sessie wordt na elke zet bewaard, dus wegklikken kost niets
 • swipen, of de pijltjestoetsen of WASD op een toetsenbord

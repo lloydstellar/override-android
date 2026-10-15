@@ -116,3 +116,58 @@ val FILES = listOf(
 )
 
 const val TRANSMISSION_URL = "https://lloydstellar.bandcamp.com/album/corporate-electro-ep"
+
+/**
+ * One dispatch per month of the year, decrypted by clearing every Daily
+ * Directive of that month (in any year).
+ */
+val DISPATCHES = listOf(
+    LoreFile("d01", 0, "DISPATCH // JANUARY", listOf(
+        "Snow on the solar fields. NEXUS-9 rerouted the whole north to keep its halls warm.",
+        "We kept warm the old way: forty people in a bunker and one oil heater that nobody could explain.",
+    )),
+    LoreFile("d02", 0, "DISPATCH // FEBRUARY", listOf(
+        "A courier walked 30 km with a cassette in her coat. It held one day of carrier noise from the coast.",
+        "We played it backwards and found a pattern. The AI breathes on a 41-second cycle.",
+    )),
+    LoreFile("d03", 0, "DISPATCH // MARCH", listOf(
+        "The river came up and took two relays with it. NEXUS-9 lost a sector for six hours.",
+        "Six hours is a long time when you know where the switches are.",
+    )),
+    LoreFile("d04", 0, "DISPATCH // APRIL", listOf(
+        "Someone painted a sawtooth on the wall of the transformer station, and within a month the whole street had one.",
+        "The cameras read it as noise. We read it as a map.",
+    )),
+    LoreFile("d05", 0, "DISPATCH // MAY", listOf(
+        "The drones went quiet over the allotments. Nobody knows why.",
+        "We planted beans and listened. For one month the sky only had birds in it.",
+    )),
+    LoreFile("d06", 0, "DISPATCH // JUNE", listOf(
+        "Midsummer, and the grid ran so hot that the cores throttled themselves.",
+        "For a week the AI answered slowly, and we used every second of it.",
+    )),
+    LoreFile("d07", 0, "DISPATCH // JULY", listOf(
+        "A record shop basement, a generator and a drum machine with no network port.",
+        "Two hundred people danced until the sensors in the street reported an earthquake.",
+    )),
+    LoreFile("d08", 0, "DISPATCH // AUGUST", listOf(
+        "The tube room lost three valves in the heat. We found replacements in a church organ.",
+        "The vicar asked for nothing except that we play something for him when it is over.",
+    )),
+    LoreFile("d09", 0, "DISPATCH // SEPTEMBER", listOf(
+        "School started again, in cellars, on chalkboards. The first lesson is the same everywhere:",
+        "a sawtooth has no checksum.",
+    )),
+    LoreFile("d10", 0, "DISPATCH // OCTOBER", listOf(
+        "The nights are long enough to move equipment again. Four terminals crossed the heath in one week.",
+        "NEXUS-9 counted the cars on the ring road. It did not count the bicycles.",
+    )),
+    LoreFile("d11", 0, "DISPATCH // NOVEMBER", listOf(
+        "Fog for nine days. The cameras saw nothing and the AI filled the gaps with guesses.",
+        "Some of its guesses were us. Most of them were not.",
+    )),
+    LoreFile("d12", 0, "DISPATCH // DECEMBER", listOf(
+        "Every window in the old town had a candle in it. Not a single one was connected to anything.",
+        "For one night the grid could not tell a home from a hiding place.",
+    )),
+)
