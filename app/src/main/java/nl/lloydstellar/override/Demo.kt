@@ -81,6 +81,16 @@ object Demo {
             ),
             pins = listOf(Triple(1, 3, 4)),
         ),
+        /* one swipe up: the 4s fuse and break the wall, and the worm infects the new block */
+        "events" to Board(
+            listOf(
+                listOf(0, 0, 0, 0),
+                listOf(4, 0, 0, 0),
+                listOf(4, 0, 0, 0),
+                listOf(512, 256, 128, 64),
+            ), score = 5200, moves = 400, trace = 30, max = 4096,
+            specials = listOf(Special(0, 0, Kind.WORM, 2, 1), Special(1, 1, Kind.WALL, 0, 1)),
+        ),
     )
 
     private class Special(val x: Int, val y: Int, val kind: Kind, val value: Int, val counter: Int)

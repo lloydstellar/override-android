@@ -82,6 +82,18 @@ class Store(ctx: Context) {
     /* one-time hints and the briefing */
     var hints by mutableStateOf(prefs.getStringSet("hints", emptySet())!!.toSet()); private set
     fun hintSeen(id: String) = id in hints
+
+    /* special blocks and pin locks you have met, and which of those the manual has shown since (kept with the hints) */
+    fun metBlock(id: String) = "met_$id" in hints
+    fun meetBlock(id: String) = markHint("met_$id")
+    fun blockIsNew(id: String) = metBlock(id) && "read_$id" !in hints
+    val manualHasNews get() = hints.any { it.startsWith("met_") && "read_" + it.removePrefix("met_") !in hints }
+    fun readBlocks() {
+        val news = hints.filter { it.startsWith("met_") }.map { "read_" + it.removePrefix("met_") }.filter { it !in hints }
+        if (news.isEmpty()) return
+        hints = hints + news
+        prefs.edit { putStringSet("hints", hints) }
+    }
     fun markHint(id: String) {
         if (id in hints) return
         hints = hints + id

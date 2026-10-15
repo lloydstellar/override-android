@@ -153,10 +153,19 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit) {
             val demo = if (BuildConfig.DEBUG) intent.getStringExtra("demo") else null
             val sector = demo?.removePrefix("sector")?.toIntOrNull()?.let { n -> nl.lloydstellar.override.engine.SECTORS.getOrNull(n - 1) }
+            /* dailyYYYY-MM-DD and weeklyYYYY-MM-DD start that directive */
+            val daily = demo?.takeIf { it.startsWith("daily") || it.startsWith("weekly") }?.let { d ->
+                val date = java.time.LocalDate.parse(d.removePrefix("daily").removePrefix("weekly"))
+                (if (d.startsWith("daily")) nl.lloydstellar.override.engine.Directives.daily(date) else nl.lloydstellar.override.engine.Directives.weekly(date)) to date
+            }
             if (sector != null) {
                 store.markHint("intro")
                 game.newSector(sector, false)
                 play(Mode.SECTOR)
+            } else if (daily != null) {
+                store.markHint("intro"); store.markHint("tutorial")
+                game.newDirective(daily.first, daily.second)
+                play(if (daily.first.kind == nl.lloydstellar.override.engine.Sector.Kind.WEEKLY) Mode.WEEKLY else Mode.DAILY)
             } else if (demo != null) {
                 store.markHint("intro"); store.markHint("tutorial")
                 val mode = Demo.load(demo, store)

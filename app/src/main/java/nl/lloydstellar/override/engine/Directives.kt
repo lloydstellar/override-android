@@ -27,6 +27,8 @@ object Directives {
         val size: Int = 0,
         /** The daily's target when this twist makes 256 too much for a few minutes of casual play. */
         val dailyTarget: Int = 256,
+        /** Too much for a few minutes of casual play: weeklies only. */
+        val weeklyOnly: Boolean = false,
         val apply: (Rules, Rng) -> Rules,
     )
 
@@ -46,7 +48,18 @@ object Directives {
         Twist("wide", "WIDE BAND", "A 5 x 5 matrix.", 1.25, 1.0, size = 5) { r, _ -> r.copy(size = 5) },
         Twist("narrow", "NARROW BAND", "A 3 x 3 matrix.", 1.0, 0.0, size = 3, dailyTarget = 64) { r, _ -> r.copy(size = 3) },
         Twist("burst", "BURST WINDOW", "A move limit.", 1.0, 1.0) { r, _ -> r },
+        /* the special blocks of Classic, one kind per twist, from the start */
+        Twist("supply", "SUPPLY RUN", "The resistance drops copies of your signals.", 0.6, 0.7) { r, _ -> r.with(Special.SUPPLY, 0.10, 8) },
+        Twist("surge", "SURGE GRID", "Surge Capacitors: after six moves they wipe the small signals around them.", 1.5, 1.5) { r, _ -> r.with(Special.CAPACITOR, 0.05, 8) },
+        Twist("cased", "LEAD CASES", "Cased Signals: crack the case, then fuse for double points.", 1.1, 1.1) { r, _ -> r.with(Special.CASED, 0.06, 16) },
+        Twist("beacon", "BEACON FIELD", "Trace Beacons transmit after fifteen moves. Wipe them out first.", 1.25, 2.2) { r, _ -> r.with(Special.BEACON, 0.04, 16) },
+        Twist("patch", "PATCH BAY", "Patch Cables double any signal up to 256.", 0.68, 0.8) { r, _ -> r.with(Special.PATCH, 0.05, 8) },
+        Twist("static", "STATIC FIELD", "Static Walls rise from the matrix. Fusions next to them break them down.", 1.15, 1.3) { r, _ -> r.with(Special.WALL, 0.04, 16) },
+        Twist("worm", "WORM SIGN", "A Worm turns your newest signal red every eight moves.", 1.2, 1.5, weeklyOnly = true) { r, _ -> r.with(Special.WORM, 0.03, 32) },
     )
+
+    /** Adds one kind of special block to the rules (a weekly may stack two). */
+    private fun Rules.with(kind: Special, chance: Double, from: Int) = copy(specials = specials + SpecialSpawn(kind, chance, from))
 
     /** Median moves of a good player to each target in plain Classic (SectorBalanceSim). */
     private fun baseMoves(target: Int, size: Int) = when {
@@ -78,7 +91,8 @@ object Directives {
     fun daily(date: LocalDate): Sector {
         val seed = mix(date.toEpochDay().toInt() * 31 + 7)
         val g = Rng(seed)
-        val twist = TWISTS[g.below(TWISTS.size)]
+        val pool = TWISTS.filter { !it.weeklyOnly }
+        val twist = pool[g.below(pool.size)]
         val place = PLACES[g.below(PLACES.size)]
         val target = twist.dailyTarget
         return build(

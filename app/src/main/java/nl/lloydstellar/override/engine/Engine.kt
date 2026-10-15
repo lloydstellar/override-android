@@ -554,15 +554,23 @@ class Engine(rules: Rules = CLASSIC) {
         return l
     }
 
+    /**
+     * True when at least one swipe changes the board. The browser only asks
+     * for a free cell anywhere, which is the same thing as long as every tile
+     * can slide; with walls and pinned signals a free cell can be out of
+     * reach, so this looks at each tile's next cell in each direction.
+     */
     fun movesAvailable(): Boolean {
-        if (freeCells().isNotEmpty()) return true
         for (x in 0 until size) for (y in 0 until size) {
             val t = grid[x][y] ?: continue
-            if (lockAt(x, y) != null) continue
-            val r = tileAt(x + 1, y)
-            val d = tileAt(x, y + 1)
-            if (r != null && lockAt(x + 1, y) == null && (meet(t, r) != Meet.NONE || meet(r, t) != Meet.NONE)) return true
-            if (d != null && lockAt(x, y + 1) == null && (meet(t, d) != Meet.NONE || meet(d, t) != Meet.NONE)) return true
+            if (blocked(x, y) || t.kind == Kind.WALL) continue
+            for (d in 0..3) {
+                val nx = x + Dir.dx[d]
+                val ny = y + Dir.dy[d]
+                if (!within(nx, ny) || blocked(nx, ny)) continue
+                val n = grid[nx][ny] ?: return true
+                if (meet(t, n) != Meet.NONE) return true
+            }
         }
         return false
     }

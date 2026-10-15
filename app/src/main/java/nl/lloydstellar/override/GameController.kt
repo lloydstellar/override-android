@@ -521,11 +521,13 @@ class GameController(private val store: Store) {
                     showHint("corrupt")
                 }
                 it.kind != Kind.SIGNAL -> {
+                    store.meetBlock(it.kind.name)
                     Sfx.special(it.kind.hostile); if (it.kind.hostile) Haptics.corrupt()
                     logLine(SPAWN_LINES.getValue(it.kind), if (it.kind.hostile) LogLine.Kind.WARN else LogLine.Kind.INFO)
                     showHint(it.kind.name.lowercase())
                 }
                 r.supply -> {
+                    store.meetBlock("SUPPLY")
                     Sfx.unlock()
                     fx.add(Fx.Floater("SUPPLY DROP  ${it.value}", 0xFF4DFF9A, false))
                     logLine("SUPPLY DROP RECEIVED  [${it.value}]", LogLine.Kind.OK)
@@ -547,6 +549,7 @@ class GameController(private val store: Store) {
             fx.add(Fx.Floater(if (l.pinned) "NEXUS-9 PINNED $cell" else "NEXUS-9 LOCKED CELL $cell", 0xFFFF4D6D, true))
             logLine("TRACE 100%: NEXUS-9 ${if (l.pinned) "PINNED THE SIGNAL IN" else "SEALED"} CELL $cell (${l.turns} TURNS)", LogLine.Kind.WARN)
             showHint("lock")
+            if (l.pinned) store.meetBlock("PIN")
             if (l.pinned) showHint("pin")
             else if (engine.locksSuffered >= 2 && rules.lockGrowth > 0) showHint("learns")
         }

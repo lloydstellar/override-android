@@ -178,7 +178,7 @@ private val TUTORIAL = mapOf(
     GameController.TutorialStep.COOL to ("COOL IT DOWN" to "Fusing makes the trace drop again. Slide so two equal signals touch and fuse."),
     GameController.TutorialStep.LOCK to ("NEXUS-9" to "If the trace reaches 100\u00A0%, NEXUS-9 locks a cell. Try it: slide without fusing until the bar is full."),
     GameController.TutorialStep.ROLLBACK to ("ROLLBACK" to "Made a bad move? ROLLBACK takes it back, new tile included. You earn charges by building big signals. Make any move first."),
-    GameController.TutorialStep.READY to ("READY" to "That is all you need. Build a 2048 to take the AI core down. Red signals and EMP Cells are explained when you meet them."),
+    GameController.TutorialStep.READY to ("READY" to "That is all you need. Build a 2048 to take the AI core down. Red nodes, EMP Cells and the other blocks are explained when you meet them, and the MANUAL in the pause menu has it all."),
 )
 
 private const val ROLLBACK_READY = "Now tap ROLLBACK below and watch your last move disappear."
@@ -261,7 +261,7 @@ private fun BottomBar(game: GameController, highlightRollback: Boolean = false) 
 }
 
 private val HINTS = mapOf(
-    "swipe" to ("SWIPE TO SLIDE EVERY SIGNAL" to "Two equal signals that touch fuse into one of double strength. Keep fusing until you hold a 2048."),
+    "swipe" to ("SWIPE TO SLIDE EVERY SIGNAL" to "Two equal signals that touch fuse into one of double strength. Keep fusing until you hit the target."),
     "corrupt" to ("A RED NODE APPEARED" to "Red nodes block a cell and help NEXUS-9 find you: every move without a fusion raises the trace faster. Slide an equal signal into one to wipe out both, or let a 64 touch it."),
     "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100\u00A0% NEXUS-9 locks a cell."),
     "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move, and a fusion right next to it cracks two moves off."),
@@ -353,7 +353,7 @@ private fun PauseOverlay(game: GameController, store: Store, onHome: () -> Unit,
         Spacer(Modifier.height(26.dp))
         CommandButton("RESUME", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.resume() }
         Spacer(Modifier.height(10.dp))
-        CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onManual)
+        CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, trailing = if (store.manualHasNews) "NEW" else null, onClick = onManual)
         Spacer(Modifier.height(10.dp))
         CommandButton(if (s != null) "START OVER" else "NEW SESSION", Modifier.fillMaxWidth(), color = C.Main) { game.restart() }
         Spacer(Modifier.height(10.dp))

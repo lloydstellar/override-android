@@ -117,6 +117,20 @@ class SpecialsTest {
         assertTrue(drops > 0)
     }
 
+    /** A free cell walled in by static is no move: the game must end instead of hanging. */
+    @Test
+    fun anUnreachableCellIsNoMove() {
+        val w = Kind.WALL
+        val e = board(CLASSIC,
+            Cell(1, 0, 0, w, 2), Cell(2, 0, 2), Cell(3, 0, 4),
+            Cell(0, 1, 0, w, 2), Cell(1, 1, 2), Cell(2, 1, 4), Cell(3, 1, 2),
+            Cell(0, 2, 4), Cell(1, 2, 8), Cell(2, 2, 2), Cell(3, 2, 4),
+            Cell(0, 3, 2), Cell(1, 3, 4), Cell(2, 3, 8), Cell(3, 3, 2))
+        assertTrue(e.freeCells().isNotEmpty())
+        assertTrue((0..3).all { e.copy().move(it) == null })
+        assertTrue(!e.movesAvailable())
+    }
+
     @Test
     fun aTraceBeaconTransmitsAndStaysAsANode() {
         val e = board(CLASSIC, Cell(0, 0, 4, Kind.BEACON, 1), Cell(3, 3, 2))

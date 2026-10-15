@@ -56,7 +56,7 @@ fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit, onTu
                     }
                 }
                 CommandButton("PLAY THE TUTORIAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onTutorial)
-                CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onManual)
+                CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, trailing = if (store.manualHasNews) "NEW" else null, onClick = onManual)
                 DashedRule()
                 CommandButton("RESET RECORDS", Modifier.fillMaxWidth(), color = C.Red) { confirm = true }
                 Text("2048 Override ${BuildConfig.VERSION_NAME}", style = mono(12.sp, C.Dim, 1.sp))

@@ -504,7 +504,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
     private fun addFloater(text: String, color: Int, big: Boolean) {
         val l = lay ?: return
         var y = l.grid.top + l.grid.height() * (if (big) 0.45f else 0.62f)
-        val gap = if (big) 24f else 14f
+        val gap = if (big) 24f else 19f
         while (floaters.any { abs(it.y - y) < gap - 2f && it.life > 30 }) y += gap
         floaters.add(Floater(text, color, y, if (big) 80f else 110f, big, if (big) -0.35f else -0.25f))
     }

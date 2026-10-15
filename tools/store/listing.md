@@ -27,7 +27,7 @@ It is the year 2048 and the AI NEXUS-9 owns every network. What it cannot read i
 
 The rules of 2048 are untouched, with two problems on top. Every move without a fusion raises the AI Trace, and at 100 % NEXUS-9 locks one of your cells, a little longer every time. Fuse right next to a lock to crack it open sooner. From the 32 onward, red Corrupted Nodes appear that refuse to fuse upward: purge one with an equal signal, or park it next to a 64 EMP Cell and watch it fry.
 
-The bigger your signals get, the more the matrix changes. Along the way you meet supply drops from the resistance, a Surge Capacitor that wipes out the small stuff around it, Cased Signals you crack open first, Patch Cables, Static Walls, Trace Beacons that give you away and a Worm that spreads. The manual explains each one once you have met it.
+The bigger your signals get, the more the matrix changes. Along the way you meet supply drops from the resistance, a Surge Capacitor that wipes out the small stuff around it, Cased Signals you crack open first, Patch Cables, Static Walls, Trace Beacons that give you away and a Worm that spreads. Some directives bring one of them from the very first move. The manual explains each one once you have met it.
 
 Twelve sectors, each with its own twist:
 • a trace that climbs three times as fast
@@ -70,7 +70,7 @@ Het is 2048 en de AI NEXUS-9 beheerst elk netwerk. Wat hij niet kan lezen is ana
 
 De regels van 2048 zijn onaangeroerd, met twee problemen erbovenop. Elke zet zonder fusie laat de AI Trace stijgen, en bij 100 % vergrendelt NEXUS-9 een van je cellen, elke keer iets langer. Fuseer vlak naast een slot om het eerder open te breken. Vanaf de 32 verschijnen rode Corrupted Nodes die niet omhoog fuseren: zuiver er een met een gelijk signaal, of zet hem naast een 64 EMP Cell en zie hem doorbranden.
 
-Hoe groter je signalen worden, hoe meer de matrix verandert. Onderweg kom je supply drops van het verzet tegen, een Surge Capacitor die alles wat klein is om zich heen wegvaagt, Cased Signals die je eerst open moet breken, Patch Cables, Static Walls, Trace Beacons die je verraden en een Worm die zich verspreidt. De handleiding legt elk blok uit zodra je het bent tegengekomen.
+Hoe groter je signalen worden, hoe meer de matrix verandert. Onderweg kom je supply drops van het verzet tegen, een Surge Capacitor die alles wat klein is om zich heen wegvaagt, Cased Signals die je eerst open moet breken, Patch Cables, Static Walls, Trace Beacons die je verraden en een Worm die zich verspreidt. Sommige directives brengen er vanaf de eerste zet een mee. De handleiding legt elk blok uit zodra je het bent tegengekomen.
 
 Twaalf sectoren, elk met een eigen twist:
 • een trace die drie keer zo snel stijgt

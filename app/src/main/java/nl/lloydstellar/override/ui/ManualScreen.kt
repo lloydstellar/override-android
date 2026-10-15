@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.sp
 import nl.lloydstellar.override.App
 import nl.lloydstellar.override.data.Store
 import nl.lloydstellar.override.engine.PIN_UNLOCK
+import nl.lloydstellar.override.engine.SPECIALS
+import androidx.compose.runtime.LaunchedEffect
 import nl.lloydstellar.override.engine.Special
 import nl.lloydstellar.override.engine.specialInfo
 
@@ -47,14 +49,17 @@ import nl.lloydstellar.override.engine.specialInfo
  */
 @Composable
 fun ManualScreen(store: Store, onBack: () -> Unit) {
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    /* what you met since you last opened the manual: marked NEW during this visit */
+    val fresh = rememberSaveable { (SPECIALS.map { it.kind.name } + "PIN").filter { store.blockIsNew(it) } }
+    LaunchedEffect(Unit) { store.readBlocks() }
+    var tab by rememberSaveable { mutableIntStateOf(if (fresh.any { it != "PIN" }) 2 else if (fresh.isNotEmpty()) 1 else 0) }
     Box(Modifier.fillMaxSize()) {
         Tube(dim = 0.2f)
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing), horizontalAlignment = Alignment.CenterHorizontally) {
             Column(Modifier.widthIn(max = 560.dp)) {
                 ScreenTitle("MANUAL", "How the matrix works.", onBack)
                 Spacer(Modifier.height(6.dp))
-                TermTabs(listOf("BASICS", "NEXUS-9", "BLOCKS"), tab) { tab = it }
+                TermTabs(listOf("BASICS", if ("PIN" in fresh) "NEXUS-9 NEW" else "NEXUS-9", if (fresh.any { it != "PIN" }) "BLOCKS NEW" else "BLOCKS"), tab) { tab = it }
             }
             Spacer(Modifier.height(10.dp))
             Column(
@@ -62,8 +67,8 @@ fun ManualScreen(store: Store, onBack: () -> Unit) {
             ) {
                 when (tab) {
                     0 -> Basics()
-                    1 -> Nexus(store.bestTile)
-                    else -> Blocks(store.bestTile)
+                    1 -> Nexus(store, fresh)
+                    else -> Blocks(store, fresh)
                 }
             }
         }
@@ -121,7 +126,8 @@ private fun Basics() {
 }
 
 @Composable
-private fun Nexus(best: Int) {
+private fun Nexus(store: Store, fresh: List<String>) {
+    val best = store.bestTile
     Section("THE AI TRACE") {
         Entry({ Preview("NODE") }, "TRACE LEVEL", null,
             "Every move without a fusion raises the trace by 5 %, plus 3 % for every red block on the board. Every fusion lowers it, a fusion of 128 or more a bit extra. Higher threat levels make it climb faster.")
@@ -136,8 +142,9 @@ private fun Nexus(best: Int) {
         Entry({ Preview("LOCK") }, "CRACK THE SEAL", null,
             "A fusion right next to a locked cell takes two moves off its counter. Fuse beside a lock to get the cell back sooner.")
         DashedRule()
-        val pin = best >= PIN_UNLOCK
-        Entry({ Preview(if (pin) "PIN" else "UNKNOWN") }, if (pin) "PIN LOCK" else "CLASSIFIED", if (pin) "FROM YOUR FIRST 512" else null,
+        val pin = best >= PIN_UNLOCK || store.metBlock("PIN")
+        Entry({ Preview(if (pin) "PIN" else "UNKNOWN") }, if (pin) "PIN LOCK" else "CLASSIFIED",
+            if (!pin) null else if ("PIN" in fresh) "NEW  //  FROM YOUR FIRST 512" else "FROM YOUR FIRST 512",
             if (pin) "Sometimes NEXUS-9 seals a cell with a signal in it. That signal stays put until the lock runs out or you crack it."
             else "Decrypts once you have built a $PIN_UNLOCK.", dim = !pin)
     }
@@ -165,24 +172,25 @@ private val BLOCKS = listOf(
 )
 
 @Composable
-private fun Blocks(best: Int) {
-    Text("Special blocks turn up in Classic, the first time when your signal gets big enough, and earlier once you have met them. CALM only gets the friendly ones. Sectors and directives keep to their own rules.",
+private fun Blocks(store: Store, fresh: List<String>) {
+    val best = store.bestTile
+    Text("Special blocks turn up in Classic, the first time when your signal gets big enough, and earlier once you have met them. CALM only gets the friendly ones. Some Daily and Weekly Directives bring one kind from the very first move.",
         style = mono(13.sp, C.Mid, 0.sp))
     Spacer(Modifier.height(12.dp))
     Section("ON THE MATRIX") {
         BLOCKS.forEachIndexed { i, b ->
             val info = b.special?.let { specialInfo(it) }
-            val known = info == null || best >= info.unlock
+            val known = info == null || best >= info.unlock || store.metBlock(info.kind.name)
             val hostile = b.id == "NODE" || b.id == "BEACON" || b.id == "WORM"
             val tag = when {
                 info == null -> "FROM A 32"
                 !known -> null
-                else -> "FROM A ${info.early}" + if (info.friendly) "" else "  //  NOT IN CALM"
+                else -> (if (info.kind.name in fresh) "NEW  //  " else "") + "FROM A ${info.early}" + if (info.friendly) "" else "  //  NOT IN CALM"
             }
             Entry(
                 { Preview(if (known) b.id else "UNKNOWN") },
                 if (known) b.name else "CLASSIFIED", tag,
-                if (known) b.text else "Decrypts once you have built a ${info!!.unlock}.",
+                if (known) b.text else "Decrypts once you have built a ${info!!.unlock} or met it on the matrix.",
                 titleColor = if (hostile) C.Red else C.Bright, dim = !known,
             )
             if (i < BLOCKS.size - 1) DashedRule()
