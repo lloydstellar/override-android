@@ -96,6 +96,8 @@ fun HomeScreen(
                     shadow = Shadow(C.Main.copy(alpha = 0.4f), blurRadius = 16f),
                     lineHeight = 50.sp
                 )
+                /* the small kicker of Lloyd's Spin Doctor; not part of the official name */
+                Text("LLOYD'S", style = mono(14.sp, C.Mid, 4.sp))
                 Text("2048\nOVERRIDE", style = title)
                 Spacer(Modifier.height(10.dp))
                 AmberStroke(120.dp)
