@@ -91,6 +91,9 @@ fun GameScreen(
     val view = remember { GameView(ctx, game) }
     view.effectsEnabled = store.effects && GameView.systemAnimations()
     view.phosphor = store.phosphor
+    view.highlightTrace = game.mode == Mode.TUTORIAL && game.tutorialStep in listOf(
+        GameController.TutorialStep.TRACE, GameController.TutorialStep.COOL, GameController.TutorialStep.LOCK
+    )
     var topPx by remember { mutableIntStateOf(0) }
     var bottomPx by remember { mutableIntStateOf(0) }
 
@@ -134,14 +137,10 @@ fun GameScreen(
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .onGloballyPositioned { bottomPx = (it.findRootCoordinates().size.height - it.positionInRoot().y).toInt() }
         ) {
-            if (tutorial) TutorialCard(game.tutorialStep, onTutorialDone) else BottomBar(game)
-        }
-        if (tutorial) {
-            /* the next board comes in once the fusion has landed */
-            LaunchedEffect(game.tutorialStep) {
-                delay(if (game.tutorialStep == 0) 0 else 750)
-                game.loadTutorialBoard()
-            }
+            if (tutorial) {
+                TutorialCard(game.tutorialStep, game.tutorialLocked, game.canRollback, onTutorialDone)
+                if (game.tutorialStep == GameController.TutorialStep.ROLLBACK) BottomBar(game, highlightRollback = true)
+            } else BottomBar(game)
         }
 
         game.hint?.let { h ->
@@ -165,26 +164,40 @@ fun GameScreen(
 
 /* ---------------- the tutorial ---------------- */
 
-private val TUTORIAL = listOf(
-    "SWIPE TO SLIDE" to "Every signal slides as far as it can. Slide the two 2s together and they fuse into a 4.",
-    "KEEP FUSING" to "Equal signals fuse into double strength: 4 and 4 make 8. Keep going, all the way to 2048.",
-    "NEXUS-9 IS WATCHING" to "Moves without a fusion raise the AI TRACE. At 100\u00A0% NEXUS-9 locks a cell for a few moves. " +
-        "Keep fusing to stay hidden. A bad move? ROLLBACK takes it back.",
+private val TUTORIAL = mapOf(
+    GameController.TutorialStep.SLIDE to ("SWIPE TO SLIDE" to "Swipe anywhere on the screen. Every signal slides as far as it can. Slide the two 2s together."),
+    GameController.TutorialStep.FUSE to ("FUSE" to "Two equal signals fuse into one of double strength. A second 4 just arrived: fuse the two 4s into an 8."),
+    GameController.TutorialStep.TRACE to ("THE AI TRACE" to "The lit bar at the top is the AI TRACE. It rises with every move that fuses nothing. Slide a few times without fusing and watch it climb."),
+    GameController.TutorialStep.COOL to ("COOL IT DOWN" to "Fusing makes the trace drop again. Slide so two equal signals touch and fuse."),
+    GameController.TutorialStep.LOCK to ("NEXUS-9" to "If the trace reaches 100\u00A0%, NEXUS-9 locks a cell. Try it: slide without fusing until the bar is full."),
+    GameController.TutorialStep.ROLLBACK to ("ROLLBACK" to "Made a bad move? ROLLBACK takes it back, new tile included. You earn charges by building big signals. Make any move first."),
+    GameController.TutorialStep.READY to ("READY" to "That is all you need. Build a 2048 to take the AI core down. Red signals and EMP Cells are explained when you meet them."),
 )
 
-/** The tutorial: three short steps, always with a way out. */
+private const val ROLLBACK_READY = "Now tap ROLLBACK below and watch your last move disappear."
+
+private const val LOCKED_TEXT = "That red cell is locked: nothing slides into it or out of it. The number counts down with every move. Make a few moves and it opens again."
+
+/** The tutorial: one thing per step, always by doing it, always with a way out. */
 @Composable
-private fun TutorialCard(step: Int, onDone: () -> Unit) {
-    val (title, body) = TUTORIAL[step.coerceIn(0, TUTORIAL.size - 1)]
+private fun TutorialCard(step: GameController.TutorialStep, locked: Boolean, rollbackReady: Boolean, onDone: () -> Unit) {
+    val (title, body0) = TUTORIAL.getValue(step)
+    val body = when {
+        step == GameController.TutorialStep.LOCK && locked -> LOCKED_TEXT
+        step == GameController.TutorialStep.ROLLBACK && rollbackReady -> ROLLBACK_READY
+        else -> body0
+    }
+    val last = step == GameController.TutorialStep.READY
+    val swipe = step.ordinal <= GameController.TutorialStep.LOCK.ordinal || step == GameController.TutorialStep.ROLLBACK && !rollbackReady
     ConsolePanel(
         Modifier.fillMaxWidth().wrapContentWidth().widthIn(max = 560.dp).padding(horizontal = 16.dp, vertical = 10.dp)
-            .height(196.dp),
+            .height(206.dp),
         edge = C.Amber
     ) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("TRAINING ${step + 1}/${TUTORIAL.size}", style = mono(12.sp, C.Amber, 1.5.sp), modifier = Modifier.weight(1f))
-                if (step < TUTORIAL.size - 1) {
+                Text("TRAINING ${step.ordinal + 1}/${TUTORIAL.size}", style = mono(12.sp, C.Amber, 1.5.sp), modifier = Modifier.weight(1f))
+                if (!last) {
                     Text(
                         "SKIP TUTORIAL ▸", style = mono(13.sp, C.Mid, 1.sp),
                         modifier = Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = click(onDone))
@@ -199,12 +212,10 @@ private fun TutorialCard(step: Int, onDone: () -> Unit) {
                     Spacer(Modifier.height(4.dp))
                     Text(body, style = mono(13.sp, C.Mid, 0.sp))
                 }
-                if (step < 2) SwipeHand(vertical = false)
+                if (swipe) SwipeHand(vertical = false)
             }
             Spacer(Modifier.weight(1f))
-            if (step >= TUTORIAL.size - 1) {
-                CommandButton("JACK IN", Modifier.fillMaxWidth(), primary = true, height = 50.dp, onClick = onDone)
-            }
+            if (last) CommandButton("JACK IN", Modifier.fillMaxWidth(), primary = true, height = 50.dp, onClick = onDone)
         }
     }
 }
@@ -225,7 +236,7 @@ private fun SwipeHand(vertical: Boolean) {
 /* ---------------- the bar under the terminal ---------------- */
 
 @Composable
-private fun BottomBar(game: GameController) {
+private fun BottomBar(game: GameController, highlightRollback: Boolean = false) {
     Row(
         Modifier.fillMaxWidth().wrapContentWidth().widthIn(max = 560.dp).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -236,7 +247,8 @@ private fun BottomBar(game: GameController) {
         val label = if (game.maxCharges == 0) "NO ROLLBACK" else "ROLLBACK " + "■".repeat(charges) + "□".repeat((game.maxCharges - charges).coerceAtLeast(0))
         CommandButton(
             label, Modifier.weight(1f).semantics { contentDescription = "Rollback, $charges " + (if (charges == 1) "charge" else "charges") + " left" },
-            color = C.Main, height = 52.dp, enabled = game.canRollback && game.phase == Phase.PLAYING
+            color = if (highlightRollback && rememberBlink(450)) C.Amber else C.Main, height = 52.dp,
+            enabled = game.canRollback && game.phase == Phase.PLAYING
         ) { game.rollback() }
     }
 }

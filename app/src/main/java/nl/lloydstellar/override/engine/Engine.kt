@@ -320,6 +320,29 @@ class Engine(rules: Rules = CLASSIC) {
     /** Clears the animation state, so a restored board does not slide in. */
     fun settle() = eachTile { it.px = it.x; it.py = it.y; it.mergedFrom = null; it.fresh = false }
 
+    /* ---------------- for the tutorial ---------------- */
+
+    /** Changes the rules in the middle of a game, keeping the board (same size and dead cells). */
+    fun retune(r: Rules) {
+        require(r.size == rules.size)
+        rules = r
+    }
+
+    /** Puts a signal in a free cell; it pops in like a spawn. */
+    fun inject(x: Int, y: Int, value: Int): Tile? {
+        if (!cellFree(x, y)) return null
+        val t = Tile(nextId++, x, y, value, false)
+        t.fresh = true
+        place(t)
+        if (value > maxTile) maxTile = value
+        return t
+    }
+
+    /** Takes a signal off the board. */
+    fun clearCell(x: Int, y: Int) {
+        if (within(x, y)) grid[x][y] = null
+    }
+
     /** A deep copy, for looking ahead (the hint bot and the balance simulation). */
     fun copy(): Engine {
         val e = Engine(rules)

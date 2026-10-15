@@ -23,6 +23,7 @@ import nl.lloydstellar.override.engine.MoveResult
 import nl.lloydstellar.override.engine.Rng
 import nl.lloydstellar.override.engine.SECTORS
 import nl.lloydstellar.override.engine.Sector
+import nl.lloydstellar.override.engine.Rules
 import nl.lloydstellar.override.engine.boardJson
 import nl.lloydstellar.override.engine.Directives
 import nl.lloydstellar.override.engine.threat
@@ -125,7 +126,7 @@ class GameController(private val store: Store) {
     val seconds: Int get() = ((elapsedMs + if (phase == Phase.PLAYING && resumedAt > 0) SystemClock.elapsedRealtime() - resumedAt else 0) / 1000).toInt()
     val best: Int get() = if (mode == Mode.CLASSIC) maxOf(store.bestFor(level), score) else 0
     val beatingRecord: Boolean get() = mode == Mode.CLASSIC && bestAtStart in 1 until score
-    val rules get() = sector?.rules ?: threat(level).rules
+    val rules get() = if (mode == Mode.TUTORIAL) tutorialRules else sector?.rules ?: threat(level).rules
     /** The most rollback charges this game can hold. */
     val maxCharges: Int get() = rules.rollbackMax + if (assisted) ASSIST_CHARGES else 0
 
@@ -153,13 +154,18 @@ class GameController(private val store: Store) {
     /* ---------------- the tutorial ---------------- */
 
     /**
-     * 0: fuse two 2s, 1: fuse two 4s into an 8, 2: NEXUS-9 and the trace, read
-     * and go. The step moves on when the player makes the fusion; the next
-     * board is loaded by the screen once the slide has landed.
+     * The tutorial plays on one board that grows with the player, one thing
+     * at a time, always by doing it: slide, fuse, watch the trace rise, cool
+     * it down, get locked and wait it out, roll a move back. The rules change
+     * between steps (only 2s spawn, a trace that moves fast enough to see),
+     * never the board.
      */
-    var tutorialStep by mutableIntStateOf(0); private set
-    /** The step the board on screen belongs to. */
-    private var tutorialBoard = -1
+    enum class TutorialStep { SLIDE, FUSE, TRACE, COOL, LOCK, ROLLBACK, READY }
+
+    var tutorialStep by mutableStateOf(TutorialStep.SLIDE); private set
+    /** The lock of the LOCK step has appeared and the player waits for it to open. */
+    var tutorialLocked by mutableStateOf(false); private set
+    private var tutorialRules = TUTORIAL_RULES
 
     fun startTutorial() {
         finishPending()
@@ -172,36 +178,108 @@ class GameController(private val store: Store) {
         active = false
         pendingEnd = false
         phase = Phase.PLAYING
-        tutorialStep = 0
-        tutorialBoard = -1
-        loadTutorialBoard()
+        tutorialStep = TutorialStep.SLIDE
+        tutorialLocked = false
+        tutorialRules = TUTORIAL_RULES
+        engine.restore(TUTORIAL_START, tutorialRules)
+        engine.settle()
+        logLine("TRAINING LINK ESTABLISHED.", LogLine.Kind.OK)
+        fx.add(Fx.Snap)
         Sfx.jackIn()
+        sync()
         updateMusic()
     }
 
-    /** Shows the board of the current step (called by the screen after the slide of the last fusion). */
-    fun loadTutorialBoard() {
-        if (mode != Mode.TUTORIAL || tutorialBoard == tutorialStep) return
-        tutorialBoard = tutorialStep
-        engine.restore(TUTORIAL_BOARDS[tutorialStep], TUTORIAL_RULES)
-        engine.settle()
-        log.clear()
-        when (tutorialStep) {
-            0 -> logLine("TRAINING LINK ESTABLISHED.", LogLine.Kind.OK)
-            1 -> logLine("FUSION CONFIRMED. KEEP GOING.", LogLine.Kind.OK)
-            else -> { logLine("TRACE 100%: NEXUS-9 SEALED CELL B2 (5 TURNS)", LogLine.Kind.WARN); Sfx.lock() }
+    private fun tutorialNext(step: TutorialStep) {
+        tutorialStep = step
+        Sfx.unlock()
+        when (step) {
+            TutorialStep.FUSE -> {
+                /* a 4 joins the one the player just made, in line with it */
+                pairUp(4)
+                logLine("FUSION CONFIRMED. KEEP GOING.", LogLine.Kind.OK)
+            }
+            TutorialStep.TRACE -> {
+                retuneTutorial(TUTORIAL_RULES.copy(traceEmpty = 20))
+                logLine("WARNING: NEXUS-9 IS LISTENING.", LogLine.Kind.WARN)
+            }
+            TutorialStep.COOL -> {
+                /* any fusion now takes a big bite out of the trace */
+                retuneTutorial(TUTORIAL_RULES.copy(traceEmpty = 20, bigFusion = 2, traceBigBonus = 24))
+                pairUp(2)
+                logLine("TRACE CLIMBING. FUSE TO COOL IT DOWN.", LogLine.Kind.INFO)
+            }
+            TutorialStep.LOCK -> {
+                retuneTutorial(TUTORIAL_RULES.copy(traceEmpty = 34, lockTurns = 3, traceAfterLock = 0))
+                logLine("LET THE TRACE REACH 100%.", LogLine.Kind.INFO)
+            }
+            TutorialStep.ROLLBACK -> {
+                retuneTutorial(TUTORIAL_RULES)
+                /* only the move the player makes next can be rolled back */
+                history.clear(); historySize = 0
+                charges = 1
+                logLine("ROLLBACK BUFFER CHARGED  [1]", LogLine.Kind.OK)
+            }
+            TutorialStep.READY -> logLine("TRAINING COMPLETE.", LogLine.Kind.OK)
+            TutorialStep.SLIDE -> {}
         }
-        fx.add(Fx.Snap)
         sync()
     }
 
-    private fun advanceTutorial(r: MoveResult) {
-        val goal = if (tutorialStep == 0) 4 else 8
-        if (tutorialStep < 2 && r.merges.any { it.value >= goal }) {
-            tutorialStep++
-            Sfx.unlock()
+    private fun retuneTutorial(r: Rules) {
+        tutorialRules = r
+        engine.retune(r)
+    }
+
+    /** Puts a [value] in line with one already on the board, so the next fusion is one swipe away. */
+    private fun pairUp(value: Int) {
+        val own = engine.tiles().filter { it.value == value && !it.corrupt }.ifEmpty { engine.tiles() }
+        for (t in own) {
+            val n = engine.size
+            /* the farthest free cell in the same row or column, so the swipe that fuses is clear */
+            val candidates = (0 until n).map { it to t.y } + (0 until n).map { t.x to it }
+            val free = candidates.filter { (x, y) -> (x != t.x || y != t.y) && engine.tileAt(x, y) == null && engine.lockAt(x, y) == null }
+                .filter { (x, y) -> clearBetween(t.x, t.y, x, y) }
+            val c = free.maxByOrNull { (x, y) -> kotlin.math.abs(x - t.x) + kotlin.math.abs(y - t.y) } ?: continue
+            engine.inject(c.first, c.second, t.value)
+            return
         }
     }
+
+    private fun clearBetween(x0: Int, y0: Int, x1: Int, y1: Int): Boolean {
+        val dx = Integer.signum(x1 - x0); val dy = Integer.signum(y1 - y0)
+        var x = x0 + dx; var y = y0 + dy
+        while (x != x1 || y != y1) {
+            if (engine.tileAt(x, y) != null || engine.lockAt(x, y) != null) return false
+            x += dx; y += dy
+        }
+        return true
+    }
+
+    private fun advanceTutorial(r: MoveResult) {
+        when (tutorialStep) {
+            TutorialStep.SLIDE -> if (r.merges.any { it.value >= 4 }) tutorialNext(TutorialStep.FUSE)
+            TutorialStep.FUSE -> if (r.merges.any { it.value >= 8 }) tutorialNext(TutorialStep.TRACE)
+            TutorialStep.TRACE -> if (engine.trace >= 50) tutorialNext(TutorialStep.COOL)
+            TutorialStep.COOL -> if (r.fusions > 0 && r.traceAfter < r.traceBefore) tutorialNext(TutorialStep.LOCK)
+            TutorialStep.LOCK -> {
+                if (r.lock != null) {
+                    tutorialLocked = true
+                    /* one lock is enough: the trace stays quiet while the player waits it out */
+                    retuneTutorial(TUTORIAL_RULES)
+                }
+                if (tutorialLocked && engine.locks.isEmpty()) { tutorialLocked = false; tutorialNext(TutorialStep.ROLLBACK) }
+            }
+            else -> {}
+        }
+        /* never let the training board fill up */
+        if (engine.freeCells().size < 6) {
+            engine.tiles().filter { it.value == 2 && engine.lockAt(it.x, it.y) == null }.drop(1).forEach { engine.clearCell(it.x, it.y) }
+            logLine("TRAINING BUFFER DEFRAGMENTED.", LogLine.Kind.INFO)
+            fx.add(Fx.Snap)
+        }
+    }
+
     fun restart() = start(mode, sector)
 
     private fun start(mode: Mode, sector: Sector?) {
@@ -354,7 +432,7 @@ class GameController(private val store: Store) {
     /** Called by the GameView with a swipe. Returns what happened, or null if nothing moved. */
     fun move(dir: Int): MoveResult? {
         if (phase != Phase.PLAYING) return null
-        if (mode == Mode.TUTORIAL && (tutorialStep != tutorialBoard || tutorialStep >= 2)) return null
+        if (mode == Mode.TUTORIAL && (tutorialStep == TutorialStep.READY || tutorialStep == TutorialStep.ROLLBACK && historySize > 0)) return null
         val before = engine.toJson()
         val r = engine.move(dir) ?: return null
         history.addLast(before)
@@ -534,7 +612,10 @@ class GameController(private val store: Store) {
         engine.settle()
         charges--
         rollbacksUsed++
-        store.countRollback()
+        if (mode == Mode.TUTORIAL) {
+            engine.retune(tutorialRules)
+            tutorialNext(TutorialStep.READY)
+        } else store.countRollback()
         if (phase != Phase.PLAYING) {
             phase = Phase.PLAYING
             pendingEnd = false
@@ -684,13 +765,6 @@ class GameController(private val store: Store) {
         const val ASSIST_CHARGES = 2
         /* no trace, no nodes, only 2s: nothing distracts from the slide */
         private val TUTORIAL_RULES = CLASSIC.copy(traceEmpty = 0, fourChance = 0.0, corruptFrom = 1 shl 30, endless = false, target = 1 shl 20)
-        private val TUTORIAL_BOARDS = listOf(
-            boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 0, 0), listOf(2, 0, 0, 2), listOf(0, 0, 0, 0))),
-            boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 2, 0), listOf(4, 0, 4, 0), listOf(8, 0, 0, 0)), score = 4, moves = 1),
-            boardJson(
-                listOf(listOf(2, 4, 8, 2), listOf(0, 0, 16, 4), listOf(0, 2, 32, 8), listOf(0, 0, 4, 2)),
-                score = 316, moves = 42, trace = 100, locks = listOf(Triple(1, 1, 5))
-            ),
-        )
+        private val TUTORIAL_START = boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 0, 0), listOf(2, 0, 0, 2), listOf(0, 0, 0, 0)))
     }
 }

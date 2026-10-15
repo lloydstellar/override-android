@@ -69,6 +69,8 @@ class GameView(context: Context, private val game: GameController) : View(contex
         set(v) { if (field != v) { field = v; relayout() } }
     /** Screen shake, static and flashes (off when the player or the system asks for less motion). */
     var effectsEnabled = true
+    /** The tutorial points at the trace bar. */
+    var highlightTrace = false
     var phosphor: Phosphor = nl.lloydstellar.override.data.PHOSPHORS[0]
         set(v) { if (field.id != v.id) { field = v; bgKey = "" } }
 
@@ -578,6 +580,12 @@ class GameView(context: Context, private val game: GameController) : View(contex
             c.drawRect(x, inner.top, x + sw, inner.bottom, p)
         }
         if (warn && frameT % 30 < 15) { p.color = Color.argb(20, 255, 77, 109); c.drawRoundRect(bar, 3f, 3f, p) }
+        if (highlightTrace) {
+            /* a slow amber pulse around the whole trace row */
+            val a = 0.45f + 0.45f * sin(frameT * 0.12f)
+            stroke.color = withAlpha(0xFFFFB000.toInt(), a); stroke.strokeWidth = 2f
+            c.drawRoundRect(RectF(t.left - 5f, t.top - 6f, t.right + 4f, t.bottom + 5f), 5f, 5f, stroke)
+        }
     }
 
     /* the signal ladder of the browser, lying down under the matrix */
