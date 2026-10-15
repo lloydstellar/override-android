@@ -35,7 +35,7 @@ Twelve sectors, each with its own twist:
 • a 5 x 5 matrix, a 3 x 3 matrix, burned-out cells
 • a satellite window of 380 moves
 • the NEXUS core itself, with every rule at full strength
-Every sector gives up to three signal bars: one for the clear, one for staying under par, one for keeping NEXUS-9 under its lock limit.
+Every sector gives up to three signal bars: one for the clear, one for staying under par, one for keeping NEXUS-9 under its lock limit. Clear the core and the Deep Grid opens below it: sectors without end, each stacking two or three twists, harder the deeper you go.
 
 Every day there is a new Daily Directive: a short board with one twist, the same for every player, done in a few minutes. Every week a Weekly Directive asks for a 1024 with two twists at once. Missed a day? The calendar keeps it playable, there is no streak to lose, and a full month decrypts a new dispatch from the resistance.
 
@@ -78,7 +78,7 @@ Twaalf sectoren, elk met een eigen twist:
 • een 5 x 5-matrix, een 3 x 3-matrix, doorgebrande cellen
 • een satellietvenster van 380 zetten
 • de NEXUS-kern zelf, met elke regel op volle sterkte
-Elke sector geeft tot drie signaalbalken: een voor het halen, een voor binnen par blijven, een voor NEXUS-9 onder zijn lock-limiet houden.
+Elke sector geeft tot drie signaalbalken: een voor het halen, een voor binnen par blijven, een voor NEXUS-9 onder zijn lock-limiet houden. Heb je de kern verslagen, dan gaat daaronder het Deep Grid open: sectoren zonder einde, elk met twee of drie twists tegelijk, en hoe dieper, hoe zwaarder.
 
 Elke dag is er een nieuwe Daily Directive: een kort bord met één twist, voor iedereen hetzelfde, in een paar minuten gespeeld. Elke week vraagt een Weekly Directive om een 1024 met twee twists tegelijk. Een dag gemist? De kalender houdt hem speelbaar, er is geen streak om kwijt te raken, en een volle maand ontsleutelt een nieuw bericht van het verzet.
 

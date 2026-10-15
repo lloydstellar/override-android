@@ -16,6 +16,7 @@ import nl.lloydstellar.override.data.Run
 import nl.lloydstellar.override.data.Store
 import nl.lloydstellar.override.data.signal
 import nl.lloydstellar.override.engine.CLASSIC
+import nl.lloydstellar.override.engine.DeepGrid
 import nl.lloydstellar.override.engine.EndReason
 import nl.lloydstellar.override.engine.Engine
 import nl.lloydstellar.override.engine.GameState
@@ -33,7 +34,7 @@ import java.time.LocalDate
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class Mode { CLASSIC, SECTOR, DAILY, WEEKLY, TUTORIAL }
+enum class Mode { CLASSIC, SECTOR, DAILY, WEEKLY, DEEP, TUTORIAL }
 
 /**
  * PLAYING and PAUSED are what they say. WON is the Override (Classic: go on
@@ -143,9 +144,10 @@ class GameController(private val store: Store) {
         start(Mode.CLASSIC, null)
     }
 
+    /** A sector of the campaign or of the Deep Grid. */
     fun newSector(s: Sector, assist: Boolean) {
         assisted = assist
-        start(Mode.SECTOR, s)
+        start(if (s.kind == Sector.Kind.DEEP) Mode.DEEP else Mode.SECTOR, s)
     }
 
     /** A Daily or Weekly Directive of [date]. */
@@ -310,6 +312,7 @@ class GameController(private val store: Store) {
                 Sector.Kind.SECTOR -> "LINK ESTABLISHED. ${sector.code} ${sector.name} ONLINE."
                 Sector.Kind.DAILY -> "LINK ESTABLISHED. DAILY DIRECTIVE."
                 Sector.Kind.WEEKLY -> "LINK ESTABLISHED. WEEKLY DIRECTIVE."
+                Sector.Kind.DEEP -> "LINK ESTABLISHED. ${sector.code} ${sector.name}."
             }, LogLine.Kind.OK)
             logLine("TARGET: ${sector.rules.target} BIT.", LogLine.Kind.INFO)
         } else {
@@ -336,6 +339,7 @@ class GameController(private val store: Store) {
             val date = o.optString("date").takeIf { it.isNotEmpty() }?.let { LocalDate.parse(it) }
             val s = when (mode) {
                 Mode.SECTOR -> SECTORS.first { it.number == o.getInt("sector") }
+                Mode.DEEP -> DeepGrid.sector(o.getInt("sector"))
                 Mode.DAILY -> Directives.daily(date!!)
                 Mode.WEEKLY -> Directives.weekly(date!!)
                 else -> null
@@ -724,6 +728,10 @@ class GameController(private val store: Store) {
                 improved = store.clearSector(s.number, bars, e.moves)
                 if (SECTORS.all { store.bars[it.number - 1] > 0 }) award("sectors")
                 if (SECTORS.all { store.bars[it.number - 1] == 3 }) award("bars")
+            } else if (s.kind == Sector.Kind.DEEP) {
+                improved = store.clearDeep(s.number, bars, e.moves)
+                if (store.deepest >= 25) award("deep25")
+                if (store.deepest >= 50) award("deep50")
             } else {
                 improved = store.clearDirective(s.id, bars, e.moves)
                 if (store.dailiesCleared >= 10) award("daily10")
@@ -736,6 +744,8 @@ class GameController(private val store: Store) {
             }
         } else if (s.kind == Sector.Kind.SECTOR && e.endReason != EndReason.ABORTED) {
             store.failSector(s.number)
+        } else if (s.kind == Sector.Kind.DEEP && e.endReason != EndReason.ABORTED) {
+            store.failDeep(s.number)
         }
         result = buildResult(rank, e.score > bestAtStart && e.score > 0 && s == null, bars, improved)
         writeSlot(mode, null)
@@ -819,6 +829,7 @@ class GameController(private val store: Store) {
         Mode.SECTOR -> store.savedSector
         Mode.DAILY -> store.savedDaily
         Mode.WEEKLY -> store.savedWeekly
+        Mode.DEEP -> store.savedDeep
         Mode.TUTORIAL -> null
     }
 
@@ -827,6 +838,7 @@ class GameController(private val store: Store) {
         Mode.SECTOR -> store.saveSector(o)
         Mode.DAILY -> store.saveDaily(o)
         Mode.WEEKLY -> store.saveWeekly(o)
+        Mode.DEEP -> store.saveDeep(o)
         Mode.TUTORIAL -> Unit
     }
 

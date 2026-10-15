@@ -403,7 +403,8 @@ private fun OverrideOverlay(game: GameController) {
 @Composable
 private fun SectorClearOverlay(game: GameController, onMap: () -> Unit, onShare: (Result) -> Unit) {
     val s = game.sector ?: return
-    val directive = s.kind != nl.lloydstellar.override.engine.Sector.Kind.SECTOR
+    val directive = s.kind == nl.lloydstellar.override.engine.Sector.Kind.DAILY || s.kind == nl.lloydstellar.override.engine.Sector.Kind.WEEKLY
+    val deep = s.kind == nl.lloydstellar.override.engine.Sector.Kind.DEEP
     val r = game.result
     val e = game.engine
     val bars = r?.bars ?: 1
@@ -447,16 +448,22 @@ private fun SectorClearOverlay(game: GameController, onMap: () -> Unit, onShare:
                 style = mono(12.sp, C.Green, 0.5.sp))
         }
         Spacer(Modifier.height(18.dp))
-        val next = if (directive) null else SECTORS.getOrNull(s.number)
+        /* after sector 12 the way leads on into the Deep Grid */
+        val next = when {
+            directive -> null
+            deep || s.number == SECTORS.size -> nl.lloydstellar.override.engine.DeepGrid.sector(s.number + 1)
+            else -> SECTORS.getOrNull(s.number)
+        }
         if (directive) {
             game.result?.let { res -> CommandButton("SHARE", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { onShare(res) } }
             Spacer(Modifier.height(10.dp))
         } else if (next != null) {
+            if (s.number == SECTORS.size && !deep) {
+                Text("ALL TWELVE SECTORS ARE FREE. BELOW THE CORE THE DEEP GRID OPENS.", style = mono(14.sp, C.Amber, 1.sp))
+                Spacer(Modifier.height(14.dp))
+            }
             CommandButton("NEXT: ${next.code} ${next.name}", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.newSector(next, false) }
             Spacer(Modifier.height(10.dp))
-        } else {
-            Text("ALL TWELVE SECTORS ARE FREE. THE GRID IS OURS.", style = mono(14.sp, C.Amber, 1.sp))
-            Spacer(Modifier.height(14.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CommandButton("RETRY", Modifier.weight(1f), color = C.Main) { game.restart() }
@@ -522,14 +529,14 @@ private fun ResultsOverlay(game: GameController, r: Result, onHome: () -> Unit, 
                 Spacer(Modifier.height(10.dp))
             }
             CommandButton(
-                when (r.mode) { Mode.SECTOR -> "RETRY SECTOR"; Mode.DAILY, Mode.WEEKLY -> "RETRY"; else -> "NEW SESSION" },
+                when (r.mode) { Mode.SECTOR, Mode.DEEP -> "RETRY SECTOR"; Mode.DAILY, Mode.WEEKLY -> "RETRY"; else -> "NEW SESSION" },
                 Modifier.fillMaxWidth(), primary = true, height = 60.dp
             ) { game.restart() }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 CommandButton("HOME", Modifier.weight(1f), color = C.Main, onClick = onHome)
                 when (r.mode) {
-                    Mode.SECTOR -> CommandButton("MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
+                    Mode.SECTOR, Mode.DEEP -> CommandButton("MAP", Modifier.weight(1f), color = C.Main, onClick = onMap)
                     Mode.DAILY, Mode.WEEKLY -> CommandButton("DIRECTIVES", Modifier.weight(1f), color = C.Main, onClick = onMap)
                     else -> CommandButton("SHARE", Modifier.weight(1f), color = C.Main, onClick = onShare)
                 }

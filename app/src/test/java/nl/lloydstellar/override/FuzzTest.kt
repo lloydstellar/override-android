@@ -1,6 +1,7 @@
 package nl.lloydstellar.override
 
 import nl.lloydstellar.override.engine.CLASSIC
+import nl.lloydstellar.override.engine.DeepGrid
 import nl.lloydstellar.override.engine.Directives
 import nl.lloydstellar.override.engine.Engine
 import nl.lloydstellar.override.engine.GameState
@@ -39,6 +40,7 @@ class FuzzTest {
         SECTORS.forEach { add(it.code to it.rules) }
         (0 until 40).forEach { val d = Directives.daily(LocalDate.of(2026, 10, 1).plusDays(it.toLong())); add(d.id to d.rules) }
         (0 until 10).forEach { val w = Directives.weekly(LocalDate.of(2026, 10, 5).plusWeeks(it.toLong())); add(w.id to w.rules) }
+        (DeepGrid.FIRST until DeepGrid.FIRST + 40 step 2).forEach { val d = DeepGrid.sector(it); add(d.id to d.rules) }
     }
 
     private fun check(e: Engine, where: String) {

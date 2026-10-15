@@ -38,6 +38,7 @@ import nl.lloydstellar.override.render.Sprites
 import nl.lloydstellar.override.ui.AboutScreen
 import nl.lloydstellar.override.ui.ArchiveScreen
 import nl.lloydstellar.override.ui.C
+import nl.lloydstellar.override.ui.DeepGridScreen
 import nl.lloydstellar.override.ui.DirectivesScreen
 import nl.lloydstellar.override.ui.GameScreen
 import nl.lloydstellar.override.ui.HomeScreen
@@ -63,7 +64,7 @@ object App {
     }
 }
 
-enum class Screen { INTRO, HOME, GAME, SECTORS, DIRECTIVES, ARCHIVE, RECORDS, SETTINGS, ABOUT, MANUAL }
+enum class Screen { INTRO, HOME, GAME, SECTORS, DEEP, DIRECTIVES, ARCHIVE, RECORDS, SETTINGS, ABOUT, MANUAL }
 
 class MainActivity : ComponentActivity() {
 
@@ -152,7 +153,10 @@ class MainActivity : ComponentActivity() {
         /* debug builds: start straight into a demo board (see Demo) */
         LaunchedEffect(Unit) {
             val demo = if (BuildConfig.DEBUG) intent.getStringExtra("demo") else null
-            val sector = demo?.removePrefix("sector")?.toIntOrNull()?.let { n -> nl.lloydstellar.override.engine.SECTORS.getOrNull(n - 1) }
+            val sector = demo?.takeIf { it.startsWith("sector") }?.removePrefix("sector")?.toIntOrNull()?.let { n ->
+                if (n >= nl.lloydstellar.override.engine.DeepGrid.FIRST) nl.lloydstellar.override.engine.DeepGrid.sector(n)
+                else nl.lloydstellar.override.engine.SECTORS.getOrNull(n - 1)
+            }
             /* dailyYYYY-MM-DD and weeklyYYYY-MM-DD start that directive */
             val daily = demo?.takeIf { it.startsWith("daily") || it.startsWith("weekly") }?.let { d ->
                 val date = java.time.LocalDate.parse(d.removePrefix("daily").removePrefix("weekly"))
@@ -161,7 +165,7 @@ class MainActivity : ComponentActivity() {
             if (sector != null) {
                 store.markHint("intro")
                 game.newSector(sector, false)
-                play(Mode.SECTOR)
+                play(game.mode)
             } else if (daily != null) {
                 store.markHint("intro"); store.markHint("tutorial")
                 game.newDirective(daily.first, daily.second)
@@ -187,7 +191,11 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(store.haptics) { Haptics.enabled = store.haptics }
         C.phosphor = store.phosphor
 
-        if (screen != Screen.HOME && screen != Screen.GAME && screen != Screen.INTRO) BackHandler { screen = if (screen == Screen.MANUAL) Screen.SETTINGS else Screen.HOME }
+        if (screen != Screen.HOME && screen != Screen.GAME && screen != Screen.INTRO) BackHandler {
+            screen = when (screen) { Screen.MANUAL -> Screen.SETTINGS; Screen.DEEP -> Screen.SECTORS; else -> Screen.HOME }
+        }
+        /* NEXT on a cleared sector 12 goes on into the Deep Grid: keep the save slot of a restart in step */
+        LaunchedEffect(game.mode) { if (screen == Screen.GAME && game.mode != Mode.TUTORIAL) playing = game.mode }
 
         fun home() { game.leave(); screen = Screen.HOME }
 
@@ -222,9 +230,13 @@ class MainActivity : ComponentActivity() {
                         game, store,
                         onHome = { home() },
                         onMap = {
-                            val directive = game.mode == Mode.DAILY || game.mode == Mode.WEEKLY
+                            val mode = game.mode
                             game.leave()
-                            screen = if (directive) Screen.DIRECTIVES else Screen.SECTORS
+                            screen = when (mode) {
+                                Mode.DAILY, Mode.WEEKLY -> Screen.DIRECTIVES
+                                Mode.DEEP -> Screen.DEEP
+                                else -> Screen.SECTORS
+                            }
                         },
                         onShare = { share(it) },
                         onTutorialDone = { tutorialDone() },
@@ -234,6 +246,13 @@ class MainActivity : ComponentActivity() {
                         onBack = { screen = Screen.HOME },
                         onStart = { s, assist -> game.newSector(s, assist); play(Mode.SECTOR) },
                         onContinue = { if (game.continueSaved(Mode.SECTOR)) play(Mode.SECTOR) },
+                        onDeep = { screen = Screen.DEEP },
+                    )
+                    Screen.DEEP -> DeepGridScreen(
+                        store,
+                        onBack = { screen = Screen.SECTORS },
+                        onStart = { s, assist -> game.newSector(s, assist); play(Mode.DEEP) },
+                        onContinue = { if (game.continueSaved(Mode.DEEP)) play(Mode.DEEP) },
                     )
                     Screen.DIRECTIVES -> DirectivesScreen(
                         store,

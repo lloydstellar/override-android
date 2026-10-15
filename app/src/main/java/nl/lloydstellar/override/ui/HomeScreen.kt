@@ -160,7 +160,9 @@ private fun DirectivesButton(store: Store, onClick: () -> Unit) {
 @Composable
 private fun SectorsButton(store: Store, modifier: Modifier, onClick: () -> Unit) {
     val cleared = SECTORS.count { store.bars[it.number - 1] > 0 }
-    CommandButton("SECTORS", modifier, trailing = "$cleared/${SECTORS.size}", onClick = onClick)
+    /* past the campaign the button shows the deepest sector of the Deep Grid */
+    val deepest = store.deepest
+    CommandButton("SECTORS", modifier, trailing = if (deepest > SECTORS.size) "$deepest" else "$cleared/${SECTORS.size}", onClick = onClick)
 }
 
 /** The HUD line of the site: system name on the left, a live clock on the right. */

@@ -23,6 +23,7 @@ permission and keeps scores and achievements on the phone.
 
 - **Classic** uses the browser's rules with a sharper AI Trace (see below). The engine itself matches the browser move for move; `ParityTest` proves it (see Tests).
 - **Sectors**: twelve levels with their own twist on the rules: a faster trace, Corrupted Nodes from the first move, a 5 x 5 and a 3 x 3 matrix, burned-out cells, a move limit, longer locks, and the NEXUS core at the end. Up to three signal bars each (cleared, within par, NEXUS-9 kept under the sector's lock limit).
+- **The Deep Grid**: past sector 12 the sectors go on without end (`DeepGrid.kt`). Each one stacks two or three twists of the directives, the special blocks among them, and they get harder in stages: a 1024 with two twists, three twists and pin locks from sector 18, the 2048 from sector 28. A sector's rules come from its number, so every player meets the same sector 27; the spawns are random, as in the campaign.
 - **Rollback**: undo the last move, spawn and trace included. One charge at the start, one more for every new 256, 512, 1024 and up, three at most. The random generator is restored too, so a rollback cannot be used to fish for a better spawn.
 - **Threat levels** for Classic: CALM (the browser's rules, more rollbacks), STANDARD, and THREAT 1 to 8, a ladder where each rung adds one rule and opens after an Override on the rung below. Records per level.
 - **Daily and Weekly Directives**, generated from the date (`Directives.kt`), so every player gets the same twist, board and spawns without a server. A daily is a 256 with one twist (a few minutes); a weekly is a 1024 with two. Missed days stay playable in a month calendar, there is no streak to lose, and clearing every daily of a month decrypts that month's dispatch in the archive. Results can be shared as text.
@@ -64,6 +65,7 @@ demo boards for testing and screenshots, for example:
 ```
 adb shell am start -n nl.lloydstellar.override.debug/nl.lloydstellar.override.MainActivity --es demo win
 adb shell am start -n nl.lloydstellar.override.debug/nl.lloydstellar.override.MainActivity --es demo sector5
+adb shell am start -n nl.lloydstellar.override.debug/nl.lloydstellar.override.MainActivity --es demo sector27
 ```
 
 The boards are in `Demo.kt`.
@@ -98,7 +100,13 @@ targets and par values in `Sectors.kt` come from it:
 ./gradlew :app:testDebugUnitTest --tests '*SectorBalanceSim*' -Psim=200
 ./gradlew :app:testDebugUnitTest --tests '*ClassicTuningSim*' -Psim=150
 ./gradlew :app:testDebugUnitTest --tests '*DirectiveBalanceSim*' -Psim=8
+./gradlew :app:testDebugUnitTest --tests '*DeepGridSim*' -Psim=16
 ```
+
+`DeepGridSim` plays the first fifty sectors of the Deep Grid. The stages, the
+factor bands and the `deepFactor` of some twists (stacked twists on the way to
+a 2048 behave differently from one twist on the way to a 256) come from it;
+`DeepGridTest` checks that the twists of a sector fit together.
 
 `DirectiveBalanceSim` plays the real dailies of the coming 120 days and the
 weeklies of the coming 26 weeks, plus every threat level, and reports per

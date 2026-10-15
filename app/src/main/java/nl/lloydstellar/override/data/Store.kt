@@ -45,6 +45,8 @@ val ACHIEVEMENTS = listOf(
     Achievement("hz20k", "Ultrasonic", "Reach 20,000 Hz in one session."),
     Achievement("sectors", "Liberator", "Clear all twelve sectors."),
     Achievement("bars", "Full Signal", "Earn all three bars in every sector."),
+    Achievement("deep25", "Sublevel", "Clear sector 25 in the Deep Grid."),
+    Achievement("deep50", "Bedrock", "Clear sector 50 in the Deep Grid."),
     Achievement("games25", "Night Shift", "Play 25 sessions."),
     Achievement("threat4", "Hardline", "Override in Classic at Threat 4."),
     Achievement("threat8", "Full Alert", "Override in Classic at Threat 8."),
@@ -215,6 +217,42 @@ class Store(ctx: Context) {
         prefs.edit { putString("fails", sectorFails.joinToString(",")) }
     }
 
+    /* ---------------- the deep grid ---------------- */
+    /** Bars and best moves per Deep Grid sector (13 and on). */
+    var deep by mutableStateOf(loadNumbered("deep")); private set
+    /** Lost attempts per Deep Grid sector since its last clear. */
+    var deepFails by mutableStateOf(loadNumbered("deepFails").mapValues { it.value.first }); private set
+
+    /** The Deep Grid opens when sector 12 is cleared. */
+    val deepOpen get() = bars[SECTORS.size - 1] > 0
+    /** The deepest cleared sector, or 12 before the first one. */
+    val deepest get() = deep.filterValues { it.first > 0 }.keys.maxOrNull() ?: SECTORS.size
+    fun deepBars(n: Int) = deep[n]?.first ?: 0
+    fun deepBest(n: Int) = deep[n]?.second ?: 0
+
+    /** Records a cleared Deep Grid sector; returns true when the bars improved. */
+    fun clearDeep(n: Int, earned: Int, moves: Int): Boolean {
+        val (oldBars, oldMoves) = deep[n] ?: (0 to 0)
+        val better = earned > oldBars
+        deep = deep + (n to (maxOf(earned, oldBars) to (if (oldMoves == 0) moves else minOf(oldMoves, moves))))
+        if (deepFails.containsKey(n)) deepFails = deepFails - n
+        saveNumbered()
+        return better
+    }
+
+    fun failDeep(n: Int) {
+        deepFails = deepFails + (n to (deepFails[n] ?: 0) + 1)
+        saveNumbered()
+    }
+
+    private fun saveNumbered() {
+        val d = JSONObject()
+        deep.forEach { (k, v) -> d.put(k.toString(), JSONArray().put(v.first).put(v.second)) }
+        val f = JSONObject()
+        deepFails.forEach { (k, v) -> f.put(k.toString(), JSONArray().put(v).put(0)) }
+        prefs.edit { putString("deep", d.toString()).putString("deepFails", f.toString()) }
+    }
+
     /* ---------------- directives ---------------- */
     /** Bars and best moves per directive id (D2026-10-15, W2026-42). */
     var directives by mutableStateOf(loadDirectives()); private set
@@ -277,11 +315,13 @@ class Store(ctx: Context) {
     var savedSector by mutableStateOf(loadJson("save.sector")); private set
     var savedDaily by mutableStateOf(loadJson("save.daily")); private set
     var savedWeekly by mutableStateOf(loadJson("save.weekly")); private set
+    var savedDeep by mutableStateOf(loadJson("save.deep")); private set
 
     fun saveClassic(o: JSONObject?) { savedClassic = o; putJson("save.classic", o) }
     fun saveSector(o: JSONObject?) { savedSector = o; putJson("save.sector", o) }
     fun saveDaily(o: JSONObject?) { savedDaily = o; putJson("save.daily", o) }
     fun saveWeekly(o: JSONObject?) { savedWeekly = o; putJson("save.weekly", o) }
+    fun saveDeep(o: JSONObject?) { savedDeep = o; putJson("save.deep", o) }
 
     fun resetRecords() {
         val keep = setOf("sound", "music", "haptics", "effects", "hints", "firstDay")
@@ -293,7 +333,8 @@ class Store(ctx: Context) {
         lastLevel = 0; threatWins = 0
         directives = emptyMap()
         unlocked = emptyMap()
-        savedClassic = null; savedSector = null; savedDaily = null; savedWeekly = null
+        savedClassic = null; savedSector = null; savedDaily = null; savedWeekly = null; savedDeep = null
+        deep = emptyMap(); deepFails = emptyMap()
         phosphorId = "green"
     }
 
@@ -319,6 +360,11 @@ class Store(ctx: Context) {
             Run(o.getInt("s"), o.getInt("t"), o.getLong("d"), o.optInt("m"), o.optInt("sec"), o.optBoolean("w"), o.optInt("l"))
         }
     }.getOrDefault(emptyList())
+
+    private fun loadNumbered(key: String): Map<Int, Pair<Int, Int>> = runCatching {
+        val o = JSONObject(prefs.getString(key, "{}")!!)
+        o.keys().asSequence().associate { k -> k.toInt() to o.getJSONArray(k).let { it.getInt(0) to it.getInt(1) } }
+    }.getOrDefault(emptyMap())
 
     private fun loadDirectives(): Map<String, Pair<Int, Int>> = runCatching {
         val o = JSONObject(prefs.getString("directives", "{}")!!)

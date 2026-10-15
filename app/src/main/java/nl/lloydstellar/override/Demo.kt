@@ -58,6 +58,15 @@ object Demo {
                 listOf(128, 128, 32, 8),
             ), score = 1630, moves = 141, trace = 4, max = 128, sector = 1
         ),
+        /* one swipe left from clearing sector 12, the way into the Deep Grid */
+        "s12win" to Board(
+            listOf(
+                listOf(2, 4, 0, 0),
+                listOf(8, 16, 4, 0),
+                listOf(64, 128, 256, 32),
+                listOf(1024, 1024, 512, 16),
+            ), score = 20800, moves = 1180, trace = 10, max = 1024, sector = 12
+        ),
         "endless" to Board(
             listOf(
                 listOf(4, 8, 2, 0),
@@ -112,6 +121,13 @@ object Demo {
         if (name == "fails") {
             /* three lost attempts at sector 1, so its briefing offers the assist */
             repeat(3) { store.failSector(1) }
+            return null
+        }
+        if (name == "deepgrid") {
+            /* the campaign done and the first three sectors of the Deep Grid cleared */
+            (1..12).forEach { store.clearSector(it, if (it % 3 == 0) 2 else 3, 150 + it * 40) }
+            listOf(3, 2, 1).forEachIndexed { i, bars -> store.clearDeep(13 + i, bars, 600 + i * 50) }
+            store.reachTile(2048)
             return null
         }
         if (name == "progress") {

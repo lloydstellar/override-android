@@ -19,14 +19,16 @@ class Sector(
     val rules: Rules,
     val par: Int,
     val lockBudget: Int = 0,
-    /** Campaign sector, or one of the generated directives (see Directives). */
+    /** Campaign sector, one of the generated directives (see Directives) or a sector of the Deep Grid. */
     val kind: Kind = Kind.SECTOR,
     /** Where results are kept, and the short code on screen. */
     val id: String = "S" + number.toString().padStart(2, '0'),
     /** Directives use a fixed seed, so everybody gets the same spawns. */
     val seed: Int? = null,
+    /** The twists by name, for a list where the full line does not fit. */
+    val short: String = twist,
 ) {
-    enum class Kind { SECTOR, DAILY, WEEKLY }
+    enum class Kind { SECTOR, DAILY, WEEKLY, DEEP }
 
     val code get() = id
 }

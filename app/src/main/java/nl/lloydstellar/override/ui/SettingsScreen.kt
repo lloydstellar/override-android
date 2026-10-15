@@ -130,7 +130,7 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 Body("ROLLBACK undoes your last move. You start a session with one charge and earn one for every new 256, 512, 1024 and up, three at most.")
                 Heading("WAYS TO PLAY")
                 Body("CLASSIC, at the threat level you choose: CALM plays like the browser game, STANDARD is the default, and THREAT 1 to 8 each add one rule. A rung opens when you make the Override on the one below it.")
-                Body("SECTORS: twelve levels with their own twist. After three tries without a clear, the briefing offers two extra rollback charges.")
+                Body("SECTORS: twelve levels with their own twist. After three tries without a clear, the briefing offers two extra rollback charges. Clear sector 12 and the Deep Grid opens: sectors without end that stack the twists of the directives, harder the deeper you go.")
                 Body("DIRECTIVES: one short daily and one longer weekly, the same board for every player. Missed days stay playable in the calendar, and a month of dailies decrypts a dispatch.")
                 Heading("PRIVACY")
                 Body("No ads, no account, no tracking. The app has no internet access at all. Your scores stay on this phone.")

@@ -36,12 +36,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.lloydstellar.override.data.Store
+import nl.lloydstellar.override.engine.DeepGrid
 import nl.lloydstellar.override.engine.SECTORS
 import nl.lloydstellar.override.engine.Sector
 
 /** The campaign: twelve sectors, each opened by clearing the one before. */
 @Composable
-fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector, Boolean) -> Unit, onContinue: () -> Unit) {
+fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector, Boolean) -> Unit, onContinue: () -> Unit, onDeep: () -> Unit) {
     var open by rememberSaveable { mutableStateOf<Int?>(null) }
     val saved = store.savedSector
     val savedNumber = saved?.optInt("sector")
@@ -63,6 +64,7 @@ fun SectorsScreen(store: Store, onBack: () -> Unit, onStart: (Sector, Boolean) -
                     Spacer(Modifier.height(4.dp))
                 }
                 SECTORS.forEach { s -> SectorRow(store, s) { open = s.number } }
+                DeepGridRow(store, onDeep)
                 Spacer(Modifier.height(4.dp))
                 Text("BARS: ONE FOR THE OVERRIDE, ONE FOR MAKING IT WITHIN PAR, ONE FOR KEEPING NEXUS-9 UNDER ITS LOCK LIMIT.",
                     style = mono(12.sp, C.Dim, 0.5.sp))
@@ -105,6 +107,33 @@ private fun SectorRow(store: Store, s: Sector, onClick: () -> Unit) {
                 Spacer(Modifier.height(4.dp))
                 Bars(bars, size = 14.dp)
             }
+        }
+    }
+}
+
+/** The way down into the Deep Grid, under sector 12. */
+@Composable
+private fun DeepGridRow(store: Store, onClick: () -> Unit) {
+    val unlocked = store.deepOpen
+    val deepest = store.deepest
+    ConsolePanel(
+        Modifier.fillMaxWidth().clickable(enabled = unlocked, role = Role.Button, onClick = click(onClick)),
+        edge = if (unlocked) C.Amber else C.Dim
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("13+", style = display(22.sp, color = if (unlocked) C.Bright else C.Dim), modifier = Modifier.width(60.dp))
+            Column(Modifier.weight(1f)) {
+                Text("DEEP GRID", style = mono(16.sp, if (unlocked) C.Amber else C.Dim, 1.5.sp))
+                Text(
+                    when {
+                        !unlocked -> "LOCKED: CLEAR SECTOR 12"
+                        deepest < DeepGrid.FIRST -> "Sectors without end, below the core."
+                        else -> "Deepest cleared: sector $deepest."
+                    },
+                    style = mono(12.sp, if (unlocked) C.Mid else C.Dim, 0.sp)
+                )
+            }
+            if (unlocked) Text(">", style = mono(20.sp, C.Amber, 0.sp))
         }
     }
 }

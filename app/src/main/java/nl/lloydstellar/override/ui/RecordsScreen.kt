@@ -117,6 +117,7 @@ private fun Stats(store: Store) {
             LeaderRow("NEXUS-9 LOCKS", "%,d".format(en, store.locks))
             LeaderRow("ROLLBACKS", store.rollbacks.toString())
             LeaderRow("SECTORS CLEARED", "${SECTORS.count { store.bars[it.number - 1] > 0 }}/${SECTORS.size}")
+            if (store.deepest >= nl.lloydstellar.override.engine.DeepGrid.FIRST) LeaderRow("DEEPEST SECTOR", store.deepest.toString(), C.Amber)
             LeaderRow("DAILIES CLEARED", store.dailiesCleared.toString())
             LeaderRow("WEEKLIES CLEARED", store.weekliesCleared.toString())
             LeaderRow("TIME ON THE GRID", formatTime(store.seconds.toInt()))
