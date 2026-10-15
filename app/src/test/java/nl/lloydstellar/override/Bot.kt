@@ -51,12 +51,13 @@ class Bot(private val skill: Skill, seed: Long) {
         for (x in 0 until n) for (y in 0 until n) {
             val t = e.tileAt(x, y)
             if (t == null) { if (!e.isDead(x, y) && e.lockAt(x, y) == null) empty++; continue }
-            if (t.corrupt) { corrupt++; continue }
+            if (t.kind.hostile) { corrupt++; continue }
+            if (!t.signal) continue
             val v = ln(t.value.toDouble())
             /* weight towards the bottom-left corner, snake-ish */
             mono += v * ((n - 1 - x) + y) * 0.35
-            e.tileAt(x + 1, y)?.let { if (!it.corrupt) smooth -= abs(v - ln(it.value.toDouble())) }
-            e.tileAt(x, y + 1)?.let { if (!it.corrupt) smooth -= abs(v - ln(it.value.toDouble())) }
+            e.tileAt(x + 1, y)?.let { if (it.signal) smooth -= abs(v - ln(it.value.toDouble())) }
+            e.tileAt(x, y + 1)?.let { if (it.signal) smooth -= abs(v - ln(it.value.toDouble())) }
         }
         return empty * 2.7 + smooth + mono - corrupt * 2.0 - e.trace * 0.06 - e.locks.size * 2.5 + ln(e.score + 1.0)
     }

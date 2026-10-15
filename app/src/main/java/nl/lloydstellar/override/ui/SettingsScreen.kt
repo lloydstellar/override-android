@@ -33,7 +33,7 @@ import nl.lloydstellar.override.BuildConfig
 import nl.lloydstellar.override.data.Store
 
 @Composable
-fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit, onTutorial: () -> Unit) {
+fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit, onTutorial: () -> Unit, onManual: () -> Unit) {
     var confirm by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
         Tube(dim = 0.2f)
@@ -56,6 +56,7 @@ fun SettingsScreen(store: Store, onBack: () -> Unit, onChanged: () -> Unit, onTu
                     }
                 }
                 CommandButton("PLAY THE TUTORIAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onTutorial)
+                CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onManual)
                 DashedRule()
                 CommandButton("RESET RECORDS", Modifier.fillMaxWidth(), color = C.Red) { confirm = true }
                 Text("2048 Override ${BuildConfig.VERSION_NAME}", style = mono(12.sp, C.Dim, 1.sp))
@@ -124,7 +125,8 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 DashedRule()
                 Heading("HOW TO PLAY")
                 Body("Swipe to slide every signal on the matrix. Two equal signals that touch fuse into one of double strength. Build a 2048 to overload the AI core.")
-                Body("A move without a fusion raises the AI Trace; at 100\u00A0% NEXUS-9 locks a cell for a few moves. Red Corrupted Nodes refuse to fuse upward: slide an equal signal into one, or park it next to a 64 EMP Cell.")
+                Body("A move without a fusion raises the AI Trace; at 100\u00A0% NEXUS-9 locks a cell for a few moves, a little longer every time. A fusion right next to a lock cracks it open sooner. Red Corrupted Nodes refuse to fuse upward: slide an equal signal into one, or park it next to a 64 EMP Cell.")
+                Body("Bigger signals bring special blocks: supply drops, capacitors, walls, a worm and more. The MANUAL, in the settings and the pause menu, explains each one.")
                 Body("ROLLBACK undoes your last move. You start a session with one charge and earn one for every new 256, 512, 1024 and up, three at most.")
                 Heading("WAYS TO PLAY")
                 Body("CLASSIC, at the threat level you choose: CALM plays like the browser game, STANDARD is the default, and THREAT 1 to 8 each add one rule. A rung opens when you make the Override on the one below it.")

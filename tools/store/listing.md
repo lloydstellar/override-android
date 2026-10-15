@@ -25,7 +25,9 @@ licensed and credited in the app (About, Open source licences).
 
 It is the year 2048 and the AI NEXUS-9 owns every network. What it cannot read is analogue hardware. You sit at a hacked military CRT and play the number puzzle that decides the fight: slide the signals on the 4 x 4 matrix, fuse two equal signals into one of double strength, and build a pulse of exactly 2048 bit to overload the AI core.
 
-The rules of 2048 are untouched, with two problems on top. Every move without a fusion raises the AI Trace, and at 100 % NEXUS-9 locks one of your cells for five moves, and it will, a few times per session. From the 32 onward, red Corrupted Nodes appear that refuse to fuse upward: purge one with an equal signal, or park it next to a 64 EMP Cell and watch it fry.
+The rules of 2048 are untouched, with two problems on top. Every move without a fusion raises the AI Trace, and at 100 % NEXUS-9 locks one of your cells, a little longer every time. Fuse right next to a lock to crack it open sooner. From the 32 onward, red Corrupted Nodes appear that refuse to fuse upward: purge one with an equal signal, or park it next to a 64 EMP Cell and watch it fry.
+
+The bigger your signals get, the more the matrix changes. Along the way you meet supply drops from the resistance, a Surge Capacitor that wipes out the small stuff around it, Cased Signals you crack open first, Patch Cables, Static Walls, Trace Beacons that give you away and a Worm that spreads. The manual explains each one once you have met it.
 
 Twelve sectors, each with its own twist:
 • a trace that climbs three times as fast
@@ -45,7 +47,7 @@ Every tile is a piece of resistance hardware with its own icon, from a 2 Hz Sub-
 
 Also in the app:
 • 25 achievements, your top sessions per threat level and lifetime stats
-• a 30 second tutorial you can skip
+• a short tutorial you can skip, and a manual to look things up
 • haptics on every slide, fusion and lock
 • your session is saved after every move, so leaving costs nothing
 • swipe, or use the arrow keys or WASD on a keyboard
@@ -66,7 +68,9 @@ No ads, no account, no tracking, no purchases. The app has no internet access at
 
 Het is 2048 en de AI NEXUS-9 beheerst elk netwerk. Wat hij niet kan lezen is analoge hardware. Jij zit achter een gehackte militaire CRT en speelt de nummerpuzzel die het gevecht beslist: schuif de signalen over de 4 x 4-matrix, fuseer twee gelijke signalen tot één van dubbele sterkte en bouw een puls van precies 2048 bit om de kern van de AI te overbelasten.
 
-De regels van 2048 zijn onaangeroerd, met twee problemen erbovenop. Elke zet zonder fusie laat de AI Trace stijgen, en bij 100 % vergrendelt NEXUS-9 vijf zetten lang een van je cellen, en dat gebeurt een paar keer per sessie. Vanaf de 32 verschijnen rode Corrupted Nodes die niet omhoog fuseren: zuiver er een met een gelijk signaal, of zet hem naast een 64 EMP Cell en zie hem doorbranden.
+De regels van 2048 zijn onaangeroerd, met twee problemen erbovenop. Elke zet zonder fusie laat de AI Trace stijgen, en bij 100 % vergrendelt NEXUS-9 een van je cellen, elke keer iets langer. Fuseer vlak naast een slot om het eerder open te breken. Vanaf de 32 verschijnen rode Corrupted Nodes die niet omhoog fuseren: zuiver er een met een gelijk signaal, of zet hem naast een 64 EMP Cell en zie hem doorbranden.
+
+Hoe groter je signalen worden, hoe meer de matrix verandert. Onderweg kom je supply drops van het verzet tegen, een Surge Capacitor die alles wat klein is om zich heen wegvaagt, Cased Signals die je eerst open moet breken, Patch Cables, Static Walls, Trace Beacons die je verraden en een Worm die zich verspreidt. De handleiding legt elk blok uit zodra je het bent tegengekomen.
 
 Twaalf sectoren, elk met een eigen twist:
 • een trace die drie keer zo snel stijgt
@@ -86,7 +90,7 @@ Elke tegel is een stuk verzetshardware met een eigen icoon, van een 2 Hz Sub-Pul
 
 Verder in de app:
 • 25 achievements, je beste sessies per dreigingsniveau en statistieken
-• een tutorial van 30 seconden die je kunt overslaan
+• een korte tutorial die je kunt overslaan, en een handleiding om dingen na te lezen
 • haptische feedback bij elke schuif, fusie en vergrendeling
 • je sessie wordt na elke zet bewaard, dus wegklikken kost niets
 • swipen, of de pijltjestoetsen of WASD op een toetsenbord

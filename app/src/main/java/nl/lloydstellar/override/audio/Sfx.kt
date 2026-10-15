@@ -149,6 +149,29 @@ object Sfx {
         tone(Wave.SINE, 300.0, 120.0, 200.0, 0.04, 60.0)
     }
 
+    /** A Cased Signal's case cracks: a dry metallic knock. */
+    fun crack() {
+        noiseHit(3200.0, 6.0, 50.0, 0.10, 0.0, Filter.BANDPASS)
+        tone(Wave.SQUARE, 340.0, 300.0, 70.0, 0.05)
+        tone(Wave.TRIANGLE, 1260.0, 1180.0, 120.0, 0.03, 10.0)
+    }
+
+    /** A Surge Capacitor discharges: a rising whine, then the bang. */
+    fun discharge() {
+        tone(Wave.SAW, 400.0, 3000.0, 160.0, 0.04)
+        noiseHit(140.0, 1.0, 420.0, 0.16, 150.0, Filter.LOWPASS)
+        tone(Wave.SINE, 120.0, 30.0, 420.0, 0.12, 150.0)
+    }
+
+    /** A special tile spawns; [hostile] ones sound like an alarm, the others like a delivery. */
+    fun special(hostile: Boolean) {
+        if (hostile) {
+            tone(Wave.SQUARE, 330.0, 330.0, 70.0, 0.04); tone(Wave.SQUARE, 247.0, 247.0, 120.0, 0.04, 90.0)
+        } else {
+            tone(Wave.TRIANGLE, 880.0, 1320.0, 90.0, 0.04); tone(Wave.TRIANGLE, 1320.0, 1760.0, 90.0, 0.03, 80.0)
+        }
+    }
+
     /** A sector bar lights up. */
     fun bar(i: Int) = tone(Wave.SQUARE, 660.0 * (1 + i * 0.25), 660.0 * (1 + i * 0.25), 120.0, 0.04, i * 160.0)
 }

@@ -48,3 +48,42 @@ val THREATS: List<Threat> = buildList {
 fun threat(level: Int): Threat = THREATS.firstOrNull { it.level == level } ?: THREATS[1]
 
 const val MAX_THREAT = 8
+
+/**
+ * The special tiles of Classic. Each one shows up the first time in a game
+ * that reaches [unlock]; once you have built that tile in any game it comes
+ * earlier, from [early] on. CALM only gets the [friendly] ones.
+ */
+class SpecialInfo(
+    val kind: Special,
+    val name: String,
+    val unlock: Int,
+    val early: Int,
+    val chance: Double,
+    val friendly: Boolean,
+)
+
+val SPECIALS = listOf(
+    SpecialInfo(Special.SUPPLY, "SUPPLY DROP", 128, 64, 0.012, true),
+    SpecialInfo(Special.CAPACITOR, "SURGE CAPACITOR", 256, 32, 0.010, true),
+    SpecialInfo(Special.CASED, "CASED SIGNAL", 512, 128, 0.010, false),
+    SpecialInfo(Special.BEACON, "TRACE BEACON", 1024, 128, 0.006, false),
+    SpecialInfo(Special.PATCH, "PATCH CABLE", 1024, 256, 0.005, true),
+    SpecialInfo(Special.WALL, "STATIC WALL", 2048, 256, 0.005, false),
+    SpecialInfo(Special.WORM, "WORM", 4096, 512, 0.004, false),
+)
+
+fun specialInfo(kind: Special) = SPECIALS.first { it.kind == kind }
+
+/** Pin locks start once you have built a 512 in any game. */
+const val PIN_UNLOCK = 512
+const val PIN_CHANCE = 0.25
+
+/** The rules of Classic at [level] for a player whose highest tile ever is [best]. */
+fun classicRules(level: Int, best: Int): Rules {
+    val base = threat(level).rules
+    val calm = level < 0
+    val specials = SPECIALS.filter { !calm || it.friendly }
+        .map { SpecialSpawn(it.kind, it.chance, if (best >= it.unlock) it.early else it.unlock) }
+    return base.copy(specials = specials, pinChance = if (!calm && best >= PIN_UNLOCK) PIN_CHANCE else 0.0)
+}

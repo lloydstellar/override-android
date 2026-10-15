@@ -19,11 +19,13 @@ import nl.lloydstellar.override.engine.CLASSIC
 import nl.lloydstellar.override.engine.EndReason
 import nl.lloydstellar.override.engine.Engine
 import nl.lloydstellar.override.engine.GameState
+import nl.lloydstellar.override.engine.Kind
 import nl.lloydstellar.override.engine.MoveResult
 import nl.lloydstellar.override.engine.Rng
 import nl.lloydstellar.override.engine.SECTORS
 import nl.lloydstellar.override.engine.Sector
 import nl.lloydstellar.override.engine.Rules
+import nl.lloydstellar.override.engine.classicRules
 import nl.lloydstellar.override.engine.boardJson
 import nl.lloydstellar.override.engine.Directives
 import nl.lloydstellar.override.engine.threat
@@ -126,7 +128,9 @@ class GameController(private val store: Store) {
     val seconds: Int get() = ((elapsedMs + if (phase == Phase.PLAYING && resumedAt > 0) SystemClock.elapsedRealtime() - resumedAt else 0) / 1000).toInt()
     val best: Int get() = if (mode == Mode.CLASSIC) maxOf(store.bestFor(level), score) else 0
     val beatingRecord: Boolean get() = mode == Mode.CLASSIC && bestAtStart in 1 until score
-    val rules get() = if (mode == Mode.TUTORIAL) tutorialRules else sector?.rules ?: threat(level).rules
+    /* the highest tile ever when this Classic game started: decides which special tiles come early */
+    private var unlocked = 0
+    val rules get() = if (mode == Mode.TUTORIAL) tutorialRules else sector?.rules ?: classicRules(level, unlocked)
     /** The most rollback charges this game can hold. */
     val maxCharges: Int get() = rules.rollbackMax + if (assisted) ASSIST_CHARGES else 0
 
@@ -286,6 +290,7 @@ class GameController(private val store: Store) {
         finishPending()
         this.mode = mode
         this.sector = sector
+        unlocked = store.bestTile
         engine.newGame(rules, sector?.seed?.let { Rng(it) } ?: Rng.seeded())
         history.clear(); earned.clear()
         historySize = 0
@@ -339,6 +344,7 @@ class GameController(private val store: Store) {
             this.mode = mode
             this.sector = s
             this.level = o.optInt("level", 0)
+            this.unlocked = o.optInt("unlocked", store.bestTile)
             this.assisted = o.optBoolean("assist")
             this.directiveDate = date
             engine.restore(o.getJSONObject("engine"), rules)
@@ -460,22 +466,73 @@ class GameController(private val store: Store) {
             r.merges.isNotEmpty() -> Haptics.merge(r.merges.maxOf { it.value })
             else -> Haptics.slide()
         }
-        r.purges.forEach { (_, _, v) ->
+        r.purges.forEachIndexed { i, (_, _, v) ->
+            val what = hostileName(r.purgedKinds.getOrElse(i) { Kind.NODE })
             Sfx.purge()
-            fx.add(Fx.Floater("NODE PURGED  +${v * 2} Hz", 0xFFFF8A9A, false))
-            logLine("CORRUPTED NODE PURGED  +${v * 2} Hz", LogLine.Kind.OK)
+            fx.add(Fx.Floater("${what.substringAfterLast(' ')} PURGED  +${v * 2} Hz", 0xFFFF8A9A, false))
+            logLine("$what PURGED  +${v * 2} Hz", LogLine.Kind.OK)
         }
-        r.fried.forEach { _ ->
+        r.fried.forEach { t ->
             Sfx.emp()
             fx.add(Fx.Floater("EMP DISCHARGE  +64 Hz", 0xFFFFE64D, true))
-            logLine("EMP CELL FRIED A CORRUPTED NODE  +64 Hz", LogLine.Kind.OK)
+            logLine("EMP CELL FRIED ${hostileName(t.kind)}  +64 Hz", LogLine.Kind.OK)
+        }
+        r.cracks.forEach { _ ->
+            Sfx.crack()
+            logLine("CASE CRACKED. ONE MORE HIT.", LogLine.Kind.INFO)
+        }
+        if (r.cracks.isNotEmpty()) Haptics.purge()
+        r.patched.forEach { m ->
+            fx.add(Fx.Floater("PATCHED  ${m.value}", 0xFF7FD8FF, false))
+            logLine("PATCH CABLE BRIDGED A ${m.value / 2}  +${m.value} Hz", LogLine.Kind.OK)
+        }
+        r.discharges.forEach { (at, cleared) ->
+            Sfx.discharge(); Haptics.emp()
+            fx.add(Fx.Floater("SURGE  ${cleared.size} CELLS CLEARED", 0xFF7FD8FF, true))
+            logLine("SURGE CAPACITOR DISCHARGED AT ${cell(at.first, at.second)}", LogLine.Kind.WARN)
+        }
+        r.wallsHit.forEach { logLine("STATIC WALL WEAKENED  [${it.counter}]", LogLine.Kind.INFO) }
+        r.wallsBroken.forEach { _ ->
+            Sfx.purge()
+            fx.add(Fx.Floater("STATIC WALL DOWN", 0xFFB8C4CC, false))
+            logLine("STATIC WALL BROKEN", LogLine.Kind.OK)
+        }
+        r.transmitted.forEach {
+            Sfx.lock(); Haptics.lock()
+            fx.add(Fx.Floater("BEACON TRANSMITTED", 0xFFFF4D6D, true))
+            logLine("TRACE BEACON AT ${cell(it.x, it.y)} TRANSMITTED. TRACE 100%.", LogLine.Kind.WARN)
+        }
+        r.infected?.let {
+            Sfx.corrupt(); Haptics.corrupt()
+            fx.add(Fx.Floater("WORM INFECTED ${cell(it.x, it.y)}", 0xFFFF4D6D, false))
+            logLine("WORM INFECTED A SIGNAL AT ${cell(it.x, it.y)}", LogLine.Kind.WARN)
+        }
+        if (r.locksCracked > 0) {
+            Sfx.unlock()
+            fx.add(Fx.Floater("LOCK CRACKED", 0xFF4DFF9A, false))
+            logLine("NEXUS-9 LOCK CRACKED OPEN", LogLine.Kind.OK)
         }
         r.spawned?.let {
-            if (it.corrupt) {
-                Sfx.corrupt(); Haptics.corrupt()
-                logLine("CORRUPTED NODE DETECTED  [${it.value}]", LogLine.Kind.WARN)
-                showHint("corrupt")
-            } else Sfx.spawn()
+            when {
+                r.infected != null -> {}
+                it.corrupt -> {
+                    Sfx.corrupt(); Haptics.corrupt()
+                    logLine("CORRUPTED NODE DETECTED  [${it.value}]", LogLine.Kind.WARN)
+                    showHint("corrupt")
+                }
+                it.kind != Kind.SIGNAL -> {
+                    Sfx.special(it.kind.hostile); if (it.kind.hostile) Haptics.corrupt()
+                    logLine(SPAWN_LINES.getValue(it.kind), if (it.kind.hostile) LogLine.Kind.WARN else LogLine.Kind.INFO)
+                    showHint(it.kind.name.lowercase())
+                }
+                r.supply -> {
+                    Sfx.unlock()
+                    fx.add(Fx.Floater("SUPPLY DROP  ${it.value}", 0xFF4DFF9A, false))
+                    logLine("SUPPLY DROP RECEIVED  [${it.value}]", LogLine.Kind.OK)
+                    showHint("supply")
+                }
+                else -> Sfx.spawn()
+            }
         }
         if (r.traceAfter >= 80 && r.traceBefore < 80 && r.lock == null) {
             Sfx.traceWarn(); Haptics.traceWarn()
@@ -486,10 +543,12 @@ class GameController(private val store: Store) {
         if (r.locksTimedOut) logLine("NEXUS-9 LOCKS TIMED OUT", LogLine.Kind.INFO)
         r.lock?.let { l ->
             Sfx.lock(); Haptics.lock()
-            val cell = "${'A' + l.x}${l.y + 1}"
-            fx.add(Fx.Floater("NEXUS-9 LOCKED CELL $cell", 0xFFFF4D6D, true))
-            logLine("TRACE 100%: NEXUS-9 SEALED CELL $cell (${l.turns} TURNS)", LogLine.Kind.WARN)
+            val cell = cell(l.x, l.y)
+            fx.add(Fx.Floater(if (l.pinned) "NEXUS-9 PINNED $cell" else "NEXUS-9 LOCKED CELL $cell", 0xFFFF4D6D, true))
+            logLine("TRACE 100%: NEXUS-9 ${if (l.pinned) "PINNED THE SIGNAL IN" else "SEALED"} CELL $cell (${l.turns} TURNS)", LogLine.Kind.WARN)
             showHint("lock")
+            if (l.pinned) showHint("pin")
+            else if (engine.locksSuffered >= 2 && rules.lockGrowth > 0) showHint("learns")
         }
         if (r.newMax > 0) onNewMax(r.newMax)
         if (r.fried.isNotEmpty()) showHint("emp")
@@ -511,6 +570,14 @@ class GameController(private val store: Store) {
             r.ended != EndReason.NONE -> onLost(r.ended)
         }
     }
+
+    private fun hostileName(k: Kind) = when (k) {
+        Kind.BEACON -> "A TRACE BEACON"
+        Kind.WORM -> "A WORM"
+        else -> "A CORRUPTED NODE"
+    }
+
+    private fun cell(x: Int, y: Int) = "${'A' + x}${y + 1}"
 
     private fun onNewMax(v: Int) {
         val d = signal(v)
@@ -693,7 +760,7 @@ class GameController(private val store: Store) {
             .put("charges", charges)
             .put("rollbacksUsed", rollbacksUsed)
             .put("elapsed", elapsedMs)
-        o.put("level", level).put("assist", assisted)
+        o.put("level", level).put("assist", assisted).put("unlocked", unlocked)
         sector?.let { o.put("sector", it.number) }
         directiveDate?.let { if (mode == Mode.DAILY || mode == Mode.WEEKLY) o.put("date", it.toString()) }
         writeSlot(mode, o)
@@ -768,3 +835,12 @@ class GameController(private val store: Store) {
         private val TUTORIAL_START = boardJson(listOf(listOf(0, 0, 0, 0), listOf(0, 0, 0, 0), listOf(2, 0, 0, 2), listOf(0, 0, 0, 0)))
     }
 }
+
+private val SPAWN_LINES = mapOf(
+    Kind.CAPACITOR to "SURGE CAPACITOR ONLINE. DISCHARGE IN ${Engine.CAPACITOR_FUSE}.",
+    Kind.CASED to "CASED SIGNAL DETECTED. CRACK THE CASE.",
+    Kind.BEACON to "TRACE BEACON DETECTED. TRANSMITS IN ${Engine.BEACON_COUNT}.",
+    Kind.PATCH to "PATCH CABLE AVAILABLE.",
+    Kind.WALL to "STATIC WALL RAISED.",
+    Kind.WORM to "WORM IN THE MATRIX.",
+)

@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -149,8 +151,13 @@ fun GameScreen(
 
         Toasts(game, Modifier.align(Alignment.TopCenter).windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top)))
 
+        var manual by rememberSaveable { mutableStateOf(false) }
         AnimatedVisibility(game.phase == Phase.PAUSED, enter = fadeIn(tween(150)), exit = fadeOut(tween(150))) {
-            PauseOverlay(game, store, onHome)
+            PauseOverlay(game, store, onHome, onManual = { manual = true })
+        }
+        AnimatedVisibility(manual && game.phase == Phase.PAUSED, enter = fadeIn(tween(200)), exit = fadeOut(tween(150))) {
+            androidx.activity.compose.BackHandler { manual = false }
+            Box(Modifier.fillMaxSize().background(C.Void)) { ManualScreen(store) { manual = false } }
         }
         val res = game.result
         AnimatedVisibility(game.phase == Phase.WON, enter = fadeIn(tween(400, delayMillis = 1300)), exit = fadeOut(tween(150))) {
@@ -257,7 +264,16 @@ private val HINTS = mapOf(
     "swipe" to ("SWIPE TO SLIDE EVERY SIGNAL" to "Two equal signals that touch fuse into one of double strength. Keep fusing until you hold a 2048."),
     "corrupt" to ("A RED NODE APPEARED" to "Red nodes block a cell and help NEXUS-9 find you: every move without a fusion raises the trace faster. Slide an equal signal into one to wipe out both, or let a 64 touch it."),
     "trace" to ("THE AI TRACE IS CLIMBING" to "Every move without a fusion raises it, every fusion lowers it. At 100\u00A0% NEXUS-9 locks a cell."),
-    "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move."),
+    "lock" to ("NEXUS-9 LOCKED A CELL" to "Nothing slides into or out of a locked cell. The lock counts down with every move, and a fusion right next to it cracks two moves off."),
+    "learns" to ("NEXUS-9 LEARNS" to "Every lock in this session holds one move longer than the one before, up to nine. Keep the trace down."),
+    "pin" to ("PIN LOCK" to "This time NEXUS-9 sealed a cell with a signal in it. The signal stays put until the lock runs out or you crack it."),
+    "supply" to ("SUPPLY DROP" to "The resistance dropped a copy of the signal right next to it. Fuse the two before something gets in between."),
+    "capacitor" to ("SURGE CAPACITOR" to "It slides but never fuses. When its counter hits zero it discharges into the four cells around it: signals up to 64 and red nodes are wiped out, bigger signals ride it out. Park it next to clutter."),
+    "cased" to ("CASED SIGNAL" to "A signal in a lead case. Slide an equal signal into it: the first hit cracks the case, the second fuses them for double points."),
+    "beacon" to ("TRACE BEACON" to "A red node with a timer. If it reaches zero it transmits: the trace jumps to 100\u00A0% and NEXUS-9 locks a cell. Wipe it out like a node before that."),
+    "patch" to ("PATCH CABLE" to "It fuses with any signal up to 256 and doubles it. Save it for the biggest one it can take."),
+    "wall" to ("STATIC WALL" to "A wall does not slide and nothing fuses with it. Every fusion right next to it wears off a layer; after two it falls."),
+    "worm" to ("WORM" to "A red node that spreads: every eight moves it turns the newest signal into a red node. Wipe it out with an equal signal or a 64."),
     "emp" to ("EMP DISCHARGE" to "Your 64 just fried a red node. A 64 is an EMP Cell: any node that ends up right next to it burns out, for 64 Hz."),
     "rollback" to ("ROLLBACK BUFFER" to "ROLLBACK undoes your last move, spawn and trace included. You get a charge for every new 256, 512, 1024 and up, as far as the buffer holds."),
 )
@@ -323,7 +339,7 @@ private fun Scrim(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PauseOverlay(game: GameController, store: Store, onHome: () -> Unit) {
+private fun PauseOverlay(game: GameController, store: Store, onHome: () -> Unit, onManual: () -> Unit) {
     Scrim {
         Text("PAUSED", style = h1(40.sp))
         Spacer(Modifier.height(10.dp))
@@ -336,6 +352,8 @@ private fun PauseOverlay(game: GameController, store: Store, onHome: () -> Unit)
         )
         Spacer(Modifier.height(26.dp))
         CommandButton("RESUME", Modifier.fillMaxWidth(), primary = true, height = 60.dp) { game.resume() }
+        Spacer(Modifier.height(10.dp))
+        CommandButton("MANUAL", Modifier.fillMaxWidth(), color = C.Main, onClick = onManual)
         Spacer(Modifier.height(10.dp))
         CommandButton(if (s != null) "START OVER" else "NEW SESSION", Modifier.fillMaxWidth(), color = C.Main) { game.restart() }
         Spacer(Modifier.height(10.dp))

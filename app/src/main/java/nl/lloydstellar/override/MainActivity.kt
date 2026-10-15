@@ -46,6 +46,7 @@ import nl.lloydstellar.override.ui.OverrideTheme
 import nl.lloydstellar.override.ui.RecordsScreen
 import nl.lloydstellar.override.ui.SectorsScreen
 import nl.lloydstellar.override.ui.SettingsScreen
+import nl.lloydstellar.override.ui.ManualScreen
 
 /* process-wide singletons: one store, one game, one set of tile sprites for the menus */
 object App {
@@ -62,7 +63,7 @@ object App {
     }
 }
 
-enum class Screen { INTRO, HOME, GAME, SECTORS, DIRECTIVES, ARCHIVE, RECORDS, SETTINGS, ABOUT }
+enum class Screen { INTRO, HOME, GAME, SECTORS, DIRECTIVES, ARCHIVE, RECORDS, SETTINGS, ABOUT, MANUAL }
 
 class MainActivity : ComponentActivity() {
 
@@ -177,7 +178,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(store.haptics) { Haptics.enabled = store.haptics }
         C.phosphor = store.phosphor
 
-        if (screen != Screen.HOME && screen != Screen.GAME && screen != Screen.INTRO) BackHandler { screen = Screen.HOME }
+        if (screen != Screen.HOME && screen != Screen.GAME && screen != Screen.INTRO) BackHandler { screen = if (screen == Screen.MANUAL) Screen.SETTINGS else Screen.HOME }
 
         fun home() { game.leave(); screen = Screen.HOME }
 
@@ -239,7 +240,9 @@ class MainActivity : ComponentActivity() {
                     Screen.SETTINGS -> SettingsScreen(
                         store, onBack = { screen = Screen.HOME }, onChanged = { game.updateMusic() },
                         onTutorial = { game.startTutorial(); play(Mode.TUTORIAL) },
+                        onManual = { screen = Screen.MANUAL },
                     )
+                    Screen.MANUAL -> ManualScreen(store) { screen = Screen.SETTINGS }
                     Screen.ABOUT -> AboutScreen(onBack = { screen = Screen.HOME }, onOpen = { open(it) })
                 }
             }

@@ -39,7 +39,26 @@ data class Rules(
     /** Rollback charges at the start, and the most you can hold (new in the app). */
     val rollbackStart: Int = 1,
     val rollbackMax: Int = 3,
+
+    /* ---- new in the app, all off by default so [WEB] stays the browser game ---- */
+
+    /** NEXUS-9 LEARNS: every lock lasts this many moves longer than the one before, up to [lockMax]. */
+    val lockGrowth: Int = 0,
+    val lockMax: Int = 9,
+    /** CRACK THE SEAL: a fusion right next to a lock takes this many moves off it. */
+    val lockCrack: Int = 0,
+    /** PIN LOCK: chance that a lock seals a cell with a signal in it instead of an empty one. */
+    val pinChance: Double = 0.0,
+    /** The special tiles that may spawn (see [Special]). */
+    val specials: List<SpecialSpawn> = emptyList(),
+    /** At most this many special tiles at once (Corrupted Nodes not counted). */
+    val specialsMax: Int = 2,
 )
+
+/** A special tile that may spawn: [chance] per spawn once the highest tile of the game reached [from]. */
+data class SpecialSpawn(val kind: Special, val chance: Double, val from: Int)
+
+enum class Special { SUPPLY, CAPACITOR, CASED, BEACON, PATCH, WALL, WORM }
 
 /** The rules of the browser game, number for number. ParityTest plays these. */
 val WEB = Rules()
@@ -54,5 +73,8 @@ val WEB = Rules()
  * to 25 % instead of 35 %, so there is room to recover. A Corrupted Node on
  * the board adds 3 % to every idle move (1 % in the browser), so the red
  * nodes are a threat worth cleaning up and not just free space.
+ *
+ * NEXUS-9 also learns: every lock in a game lasts one move longer than the
+ * one before, up to nine. A fusion right next to a lock cracks two moves off.
  */
-val CLASSIC = WEB.copy(traceEmpty = 5, traceAfterLock = 25, tracePerNode = 3)
+val CLASSIC = WEB.copy(traceEmpty = 5, traceAfterLock = 25, tracePerNode = 3, lockGrowth = 1, lockCrack = 2)

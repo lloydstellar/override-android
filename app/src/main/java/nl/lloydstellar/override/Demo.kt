@@ -1,6 +1,7 @@
 package nl.lloydstellar.override
 
 import nl.lloydstellar.override.data.Store
+import nl.lloydstellar.override.engine.Kind
 import nl.lloydstellar.override.engine.boardJson
 import org.json.JSONArray
 import org.json.JSONObject
@@ -65,12 +66,31 @@ object Demo {
                 listOf(2048, 1024, 512, 512),
             ), score = 37104, moves = 1660, trace = 6, max = 2048, won = true, keep = true
         ),
+        /* every special tile at once; the zeros under them are filled in from [Board.specials] */
+        "specials" to Board(
+            listOf(
+                listOf(0, 2, 0, 0),
+                listOf(8, 0, 0, 4),
+                listOf(32, 0, 0, 0),
+                listOf(512, 256, 128, 64),
+            ), score = 9310, moves = 640, trace = 44, max = 4096,
+            specials = listOf(
+                Special(0, 0, Kind.CAPACITOR, 0, 2), Special(2, 0, Kind.BEACON, 4, 3),
+                Special(1, 1, Kind.CASED, 16, 2), Special(2, 1, Kind.PATCH, 0, 0),
+                Special(1, 2, Kind.WALL, 0, 2), Special(2, 2, Kind.WORM, 2, 5), Special(3, 2, Kind.CASED, 8, 1),
+            ),
+            pins = listOf(Triple(1, 3, 4)),
+        ),
     )
+
+    private class Special(val x: Int, val y: Int, val kind: Kind, val value: Int, val counter: Int)
 
     private class Board(
         val rows: List<List<Int>>, val score: Int, val moves: Int, val trace: Int,
         val locks: List<Triple<Int, Int, Int>> = emptyList(), val max: Int, val won: Boolean = false, val keep: Boolean = false,
         val sector: Int = 0,
+        val specials: List<Special> = emptyList(),
+        val pins: List<Triple<Int, Int, Int>> = emptyList(),
     )
 
     /** Puts a demo board into its save slot; returns the mode to continue, or null. */
@@ -92,9 +112,11 @@ object Demo {
         }
         val b = BOARDS[name] ?: return null
         val engine = boardJson(b.rows, b.score, b.moves, b.trace, b.locks, b.won, b.keep)
+        b.specials.forEach { engine.getJSONArray("cells").put(JSONArray().put(it.x).put(it.y).put(it.value).put(0).put(it.kind.name).put(it.counter)) }
+        b.pins.forEach { (x, y, t) -> engine.getJSONArray("locks").put(JSONArray().put(x).put(y).put(t).put(1)) }
         store.reachTile(b.max)
         val save = JSONObject().put("engine", engine).put("history", JSONArray()).put("earned", JSONArray())
-            .put("charges", 2).put("rollbacksUsed", 0).put("elapsed", b.moves * 1400L)
+            .put("charges", 2).put("rollbacksUsed", 0).put("elapsed", b.moves * 1400L).put("unlocked", b.max)
         return if (b.sector > 0) {
             store.saveSector(save.put("sector", b.sector))
             Mode.SECTOR

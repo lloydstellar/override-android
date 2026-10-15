@@ -33,6 +33,8 @@ import nl.lloydstellar.override.audio.Sfx
 import nl.lloydstellar.override.data.Phosphor
 import nl.lloydstellar.override.data.signal
 import nl.lloydstellar.override.engine.Dir
+import nl.lloydstellar.override.engine.Engine
+import nl.lloydstellar.override.engine.Kind
 import nl.lloydstellar.override.engine.MoveResult
 import nl.lloydstellar.override.engine.Tile
 import nl.lloydstellar.override.engine.Sector
@@ -428,7 +430,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
         r.spawned?.let { appears[it.id] = now + (SlideAnim.SLIDE_MS * 0.5f).toLong() }
         surgeDir = r.dir; surgeT = 0
         vu.level = min(1f, 0.45f + r.merges.size * 0.18f + r.purges.size * 0.1f)
-        if (r.spawned?.corrupt == true && effectsEnabled) noiseBurst = max(noiseBurst, 14)
+        if (r.spawned?.kind?.hostile == true && effectsEnabled) noiseBurst = max(noiseBurst, 14)
         if (r.lock != null && effectsEnabled) { shake = 9f; noiseBurst = 20 }
         describe()
     }
@@ -458,8 +460,30 @@ class GameView(context: Context, private val game: GameController) : View(contex
             }
         }
         friedShown = emptyList()
+        r.cracks.forEach { t ->
+            sparks(l, t.x, t.y, 0xFFC8D0D6.toInt(), 10)
+            rings.add(Ring(l.cellX(t.x.toFloat()) + l.cell / 2, l.cellY(t.y.toFloat()) + l.cell / 2, 10f, 20f, 0xFFC8D0D6.toInt()))
+        }
+        r.discharges.forEach { (at, cleared) ->
+            val (cx, cy) = at
+            sparks(l, cx, cy, 0xFF7FD8FF.toInt(), 34)
+            rings.add(Ring(l.cellX(cx.toFloat()) + l.cell / 2, l.cellY(cy.toFloat()) + l.cell / 2, 14f, 40f, 0xFF7FD8FF.toInt()))
+            cleared.forEach { (x, y) ->
+                sparks(l, x, y, 0xFF7FD8FF.toInt(), 12)
+                bolts.add(Bolt(l.cellX(cx.toFloat()) + l.cell / 2, l.cellY(cy.toFloat()) + l.cell / 2,
+                    l.cellX(x.toFloat()) + l.cell / 2, l.cellY(y.toFloat()) + l.cell / 2, 20f))
+            }
+            flash = if (effectsEnabled) 0.7f else 0.3f
+            if (effectsEnabled) shake = max(shake, 7f)
+        }
+        (r.wallsHit + r.wallsBroken).forEach { t -> sparks(l, t.x, t.y, 0xFFB8C4CC.toInt(), if (t in r.wallsBroken) 26 else 8) }
+        r.transmitted.forEach { t ->
+            rings.add(Ring(l.cellX(t.x.toFloat()) + l.cell / 2, l.cellY(t.y.toFloat()) + l.cell / 2, 10f, 50f, 0xFFFF7A3D.toInt()))
+            rings.add(Ring(l.cellX(t.x.toFloat()) + l.cell / 2, l.cellY(t.y.toFloat()) + l.cell / 2, 4f, 60f, 0xFFFF4D6D.toInt()))
+        }
+        r.infected?.let { t -> sparks(l, t.x, t.y, 0xFFFF5AC8.toInt(), 16) }
         /* an idle move with red nodes on the board: show that they fed the trace */
-        val nodes = game.engine.countCorrupt()
+        val nodes = game.engine.countHostile()
         if (r.fusions == 0 && nodes > 0 && game.rules.tracePerNode > 0 && r.lock == null) {
             nodePulse = 1f
             nodeTrace = nodes * game.rules.tracePerNode
@@ -480,7 +504,8 @@ class GameView(context: Context, private val game: GameController) : View(contex
     private fun addFloater(text: String, color: Int, big: Boolean) {
         val l = lay ?: return
         var y = l.grid.top + l.grid.height() * (if (big) 0.45f else 0.62f)
-        while (floaters.any { abs(it.y - y) < 12f && it.life > 30 }) y += 14f
+        val gap = if (big) 24f else 14f
+        while (floaters.any { abs(it.y - y) < gap - 2f && it.life > 30 }) y += gap
         floaters.add(Floater(text, color, y, if (big) 80f else 110f, big, if (big) -0.35f else -0.25f))
     }
 
@@ -531,6 +556,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
         drawLog(canvas, l, now)
         drawLocks(canvas, l)
         drawTiles(canvas, l, now)
+        drawPins(canvas, l)
         drawEffects(canvas, l)
         drawEndings(canvas, l, now)
         canvas.restore()
@@ -733,6 +759,35 @@ class GameView(context: Context, private val game: GameController) : View(contex
         }
     }
 
+    /** A pin lock sits on top of the signal it holds, so the value stays readable. */
+    private fun drawPins(c: Canvas, l: TerminalLayout) {
+        for (lock in game.engine.locks) {
+            if (game.engine.tileAt(lock.x, lock.y) == null) continue
+            val px = l.cellX(lock.x.toFloat())
+            val py = l.cellY(lock.y.toFloat())
+            val cs = l.cell
+            val blink = frameT % 40 < 28
+            p.color = if (blink) Color.argb(70, 255, 40, 70) else Color.argb(40, 255, 40, 70)
+            c.drawRoundRect(RectF(px, py, px + cs, py + cs), 7f, 7f, p)
+            stroke.color = 0xFFFF4D6D.toInt(); stroke.strokeWidth = 2.5f
+            c.drawRoundRect(RectF(px + 1, py + 1, px + cs - 1, py + cs - 1), 7f, 7f, stroke)
+            /* the pin: a small padlock badge, top right */
+            val bx = px + cs - 13f
+            val by = py + 13f
+            p.color = 0xFF2A0008.toInt()
+            c.drawCircle(bx, by, 10f, p)
+            p.color = 0xFFFF4D6D.toInt()
+            c.drawRoundRect(RectF(bx - 5.5f, by - 1.5f, bx + 5.5f, by + 6f), 1.5f, 1.5f, p)
+            stroke.color = 0xFFFF8A9A.toInt(); stroke.strokeWidth = 2f
+            c.drawArc(RectF(bx - 3.5f, by - 6.5f, bx + 3.5f, by + 0.5f), 180f, 180f, false, stroke)
+            p.color = 0xFF2A0008.toInt()
+            c.drawRect(RectF(px + 4f, py + cs - 16f, px + cs - 4f, py + cs - 4f), p)
+            txt.textSize = 7.5f; txt.color = 0xFFFFD6D9.toInt(); txt.textAlign = Paint.Align.CENTER
+            c.drawText("PINNED ${lock.turns}", px + cs / 2, py + cs - 7f, txt)
+            txt.textAlign = Paint.Align.LEFT
+        }
+    }
+
     private fun easeOut(t: Float) = 1 - (1 - t).pow(3)
 
     private fun drawTiles(c: Canvas, l: TerminalLayout, now: Long) {
@@ -764,6 +819,80 @@ class GameView(context: Context, private val game: GameController) : View(contex
         }
     }
 
+    /** Beacons, worms, capacitors, cables, walls and cased signals: the artwork plus their live numbers. */
+    private fun drawSpecial(c: Canvas, l: TerminalLayout, t: Tile, px: Float, py: Float, size: Float, scale: Float, alpha: Float, spritePx: Int) {
+        val dst = RectF(px, py, px + size, py + size)
+        val k = scale * l.cell / 72f
+        val look = Sprites.look(t.kind)
+        /* how close the countdown is to zero: these flash */
+        val urgent = when (t.kind) {
+            Kind.CAPACITOR -> t.counter <= 2
+            Kind.BEACON -> t.counter <= 3
+            Kind.WORM -> t.counter <= 2
+            else -> false
+        }
+        val flashOn = urgent && frameT % 20 < 10
+        if (t.kind.hostile || t.kind == Kind.CAPACITOR) {
+            val fl = if (urgent) (if (flashOn) 1f else 0.4f) else 0.7f + 0.3f * sin(frameT * 0.2f + t.id)
+            p.alpha = (alpha * fl * 255).toInt()
+            c.drawBitmap(sprites.glow(look.edge.toInt()), null, RectF(px - 12, py - 12, px + size + 12, py + size + 12), p)
+        }
+        p.alpha = (alpha * 255).toInt()
+        when (t.kind) {
+            Kind.CASED -> {
+                c.drawBitmap(sprites.tile(t.value, spritePx), null, dst, p)
+                c.drawBitmap(sprites.special(Kind.CASED, spritePx, if (t.counter <= 1) 1 else 0), null, dst, p)
+            }
+            else -> c.drawBitmap(sprites.special(t.kind, spritePx), null, dst, p)
+        }
+        if (t.kind.hostile && nodePulse > 0) {
+            val grow = (1 - nodePulse) * 14f
+            stroke.color = withAlpha(look.edge.toInt(), nodePulse); stroke.strokeWidth = 3f
+            c.drawRoundRect(RectF(px - grow, py - grow, px + size + grow, py + size + grow), 10f + grow, 10f + grow, stroke)
+        }
+        val textCol = look.text.toInt()
+        when (t.kind) {
+            Kind.CAPACITOR -> {
+                /* a charge ring that empties towards the discharge */
+                val col = if (flashOn) 0xFFFF4D6D.toInt() else textCol
+                val cx = px + size / 2
+                val cy = py + size * 0.47f
+                val rr = 17f * k
+                stroke.color = withAlpha(look.edge.toInt(), 0.25f * alpha); stroke.strokeWidth = 3f * k
+                c.drawCircle(cx, cy, rr, stroke)
+                stroke.color = withAlpha(col, alpha)
+                c.drawArc(RectF(cx - rr, cy - rr, cx + rr, cy + rr), -90f, 360f * t.counter / Engine.CAPACITOR_FUSE, false, stroke)
+                glowText(c, t.counter.toString(), cx, cy + 8f * k, col, 22f * k, 6f, Paint.Align.CENTER, alpha)
+            }
+            Kind.PATCH -> glowText(c, "x2", px + size / 2, py + size * 0.46f, 0xFFFFD27A.toInt(), 22f * k, 6f, Paint.Align.CENTER, alpha)
+            Kind.WALL -> {
+                /* one bar per layer left */
+                for (i in 0 until Engine.WALL_STRENGTH) {
+                    p.color = if (i < t.counter) look.text.toInt() else Color.argb(60, 216, 222, 228)
+                    p.alpha = (alpha * Color.alpha(p.color)).toInt()
+                    val bx = px + size / 2 + (i - 1) * 12f * k
+                    c.drawRect(bx - 4.5f * k, py + size * 0.42f, bx + 4.5f * k, py + size * 0.58f, p)
+                }
+                p.alpha = 255
+            }
+            Kind.BEACON, Kind.WORM -> {
+                glowText(c, t.value.toString(), px + size * 0.5f, py + size * 0.62f, textCol, 24f * k, 6f, Paint.Align.CENTER, alpha)
+                /* the countdown, top right */
+                val bx = px + size - 13f * k
+                val by = py + 13f * k
+                p.color = 0xFF14060A.toInt()
+                c.drawCircle(bx, by, 9f * k, p)
+                stroke.color = if (flashOn) 0xFFFF4D6D.toInt() else look.edge.toInt(); stroke.strokeWidth = 1.5f
+                c.drawCircle(bx, by, 9f * k, stroke)
+                txt.textSize = 9f * k; txt.color = if (flashOn) 0xFFFFFFFF.toInt() else textCol; txt.textAlign = Paint.Align.CENTER
+                drawMiddle(c, t.counter.toString(), bx, by, txt)
+                txt.textAlign = Paint.Align.LEFT
+            }
+            else -> {}
+        }
+        p.alpha = 255
+    }
+
     private fun drawTileAt(c: Canvas, l: TerminalLayout, t: Tile, gx: Float, gy: Float, scale: Float, alpha: Float) {
         val size = l.cell * scale
         val px = l.cellX(gx) + (l.cell - size) / 2
@@ -771,6 +900,7 @@ class GameView(context: Context, private val game: GameController) : View(contex
         val dst = RectF(px, py, px + size, py + size)
         val spritePx = (l.cell * l.s).roundToInt().coerceAtLeast(8)
         p.alpha = (alpha * 255).toInt()
+        if (!t.signal && !t.corrupt) { drawSpecial(c, l, t, px, py, size, scale, alpha, spritePx); return }
         if (t.corrupt) {
             val fl = 0.7f + 0.3f * sin(frameT * 0.25f)
             p.alpha = (alpha * fl * 255).toInt()
@@ -1079,6 +1209,12 @@ class GameView(context: Context, private val game: GameController) : View(contex
                     t == null && e.lockAt(x, y) != null -> "locked"
                     t == null -> "empty"
                     t.corrupt -> "${t.value} corrupted"
+                    t.kind == Kind.BEACON -> "${t.value} trace beacon, transmits in ${t.counter}"
+                    t.kind == Kind.WORM -> "${t.value} worm, infects in ${t.counter}"
+                    t.kind == Kind.CASED -> "${t.value} cased, ${t.counter} hits"
+                    t.kind == Kind.CAPACITOR -> "surge capacitor, discharges in ${t.counter}"
+                    t.kind == Kind.PATCH -> "patch cable"
+                    t.kind == Kind.WALL -> "static wall, strength ${t.counter}"
                     e.lockAt(x, y) != null -> "${t.value} locked"
                     else -> t.value.toString()
                 }
