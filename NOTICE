@@ -1,0 +1,22 @@
+2048 Override
+Copyright 2026 Lloyd Stellar (https://lloydstellar.nl)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The name "2048 Override" as the name of this game, the app icon, the name
+Lloyd Stellar, the story texts (the briefings, files and sector texts) and
+the tile artwork are not licensed under the Apache License. Section 6 of the
+license does not grant permission to use them. Builds published by others
+must use their own name, icon, artwork and package name.
+
+This product includes the game rules of 2048 by Gabriele Cirulli
+(https://github.com/gabrielecirulli/2048), Copyright (c) 2014 Gabriele
+Cirulli, licensed under the MIT License. The license text is in
+app/src/main/assets/licenses/MIT-2048.txt.
+
+This product includes fonts licensed under the SIL Open Font License,
+Version 1.1. The license texts are in app/src/main/assets/licenses/.
+
+The voice lines in app/src/main/assets/voice/ were rendered with sam-js
+(https://github.com/discordier/sam), a port of S.A.M., Software Automatic
+Mouth (1982).

@@ -1,0 +1,17 @@
+.gradle/
+build/
+local.properties
+signing/
+keystore.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+.DS_Store
+# working screenshots; only the sources of the store graphics are kept
+tools/shots/*
+!tools/shots/raw/
+# written by SfxTest and the sector simulation
+tools/audio/
+tools/sim/
+tools/parity/node_modules/

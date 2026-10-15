@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds rotate, so the landscape layout (tablets, foldables,
+     Chromebooks) can be checked on a phone. Release builds stay portrait. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="fullUser"
+            tools:replace="android:screenOrientation" />
+    </application>
+</manifest>
