@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- debug builds sit next to the real app on a phone: give them a name you can tell apart -->
+    <string name="app_name">Override DEBUG</string>
+</resources>
